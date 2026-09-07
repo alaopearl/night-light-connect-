@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: beacon-estate-connect-1
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_APP_NAME
+        value: Night Light Connect
+      - key: VITE_TAGLINE
+        value: Nigeria's trusted nationwide real estate & investment advisory.
+      - key: VITE_WHATSAPP_NUMBER
+        value: 09133172414
+      - key: VITE_WHATSAPP_INTL
+        value: 2349133172414
+      - key: VITE_PHONE_NUMBER
+        value: 07080210062
+      - key: VITE_PHONE_INTL
+        value: +2347080210062
+      - key: VITE_EMAIL
+        value: nightlighthomes171@gmail.com
+      - key: VITE_ADDRESS
+        value: 23 High Court, Lekki-Ajah Road, Lagos, Nigeria
+      - key: VITE_ADMIN_PIN
+        sync: false
