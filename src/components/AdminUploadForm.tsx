@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Property, PropertyType, Purpose, PromoBadge } from "../types";
 import { TITLE_TYPES, PRICE_UNITS, PROMO_BADGES, PRESET_IMAGES, LOCATIONS } from "../constants";
+import { supabase } from "../lib/supabase";
 import { X, Plus, UploadSimple, ImageSquare, CurrencyNgn, LinkSimple, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
 
 interface AdminUploadFormProps {
@@ -77,14 +78,44 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
   };
   const removeImage = (url: string) => set("imageUrls", d.imageUrls.filter((u) => u !== url));
 
-  const handleFiles = (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = () => addImages([String(reader.result)]);
-      reader.readAsDataURL(file);
-    });
+
+    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+    if (validFiles.length === 0) return;
+
+    if (!supabase) {
+      validFiles.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => addImages([String(reader.result)]);
+        reader.readAsDataURL(file);
+      });
+      return;
+    }
+
+    const uploadedUrls: string[] = [];
+
+    const bucketName = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
+
+    for (const file of validFiles) {
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/\s+/g, "-")}`;
+      const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+      if (error) {
+        console.error("Failed to upload image to S3-compatible storage:", error);
+        continue;
+      }
+
+      const publicUrl = supabase.storage.from(bucketName).getPublicUrl(data.path).data.publicUrl;
+      uploadedUrls.push(publicUrl);
+    }
+
+    if (uploadedUrls.length) {
+      addImages(uploadedUrls);
+    }
   };
 
   const addFeature = () => {

@@ -19,6 +19,11 @@ interface ImportMetaEnv {
 
   /** Admin portal access PIN (4 digits) */
   readonly VITE_ADMIN_PIN: string;
+
+  /** Supabase database configuration */
+  readonly VITE_SUPABASE_URL?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
+  readonly VITE_SUPABASE_BUCKET?: string;
 }
 
 interface ImportMeta {

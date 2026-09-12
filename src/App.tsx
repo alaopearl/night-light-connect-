@@ -17,28 +17,11 @@ import {
   Contact,
 } from "./components/HomeSections";
 import { Phone, MapPin, Check, X, CalendarCheck } from "@phosphor-icons/react";
+import { STORAGE_KEYS, readStored, writeStored } from "./lib/database";
 
-const LEADS_KEY = "nlc_leads";
-const INSPECTIONS_KEY = "nlc_inspections";
-const CUSTOM_PROPERTIES_KEY = "nlc_custom_properties";
-
-function readStored<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStored(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore */
-  }
-}
+const LEADS_KEY = STORAGE_KEYS.leads;
+const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
+const CUSTOM_PROPERTIES_KEY = STORAGE_KEYS.customProperties;
 
 export default function App() {
   const [customProperties, setCustomProperties] = useState<Property[]>(() =>

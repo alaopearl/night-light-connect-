@@ -28,10 +28,11 @@ import {
   UploadSimple,
   Tag,
 } from "@phosphor-icons/react";
+import { STORAGE_KEYS, readStored, writeStored } from "../lib/database";
 
-const LEADS_KEY = "nlc_leads";
-const INSPECTIONS_KEY = "nlc_inspections";
-const ADMIN_SESSION_KEY = "nlc_admin_unlocked";
+const LEADS_KEY = STORAGE_KEYS.leads;
+const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
+const ADMIN_SESSION_KEY = STORAGE_KEYS.adminSession;
 
 interface Inspection {
   id: string;
@@ -43,24 +44,8 @@ interface Inspection {
   createdAt: string;
 }
 
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-function save(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore */
-  }
-}
-
-
+const load = <T,>(key: string, fallback: T): T => readStored(key, fallback);
+const save = (key: string, value: unknown) => writeStored(key, value);
 
 type Tab = "upload" | "manager" | "leads" | "inspections";
 
