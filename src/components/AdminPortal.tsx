@@ -28,7 +28,8 @@ import {
   UploadSimple,
   Tag,
 } from "@phosphor-icons/react";
-import { STORAGE_KEYS, readStored, writeStored } from "../lib/database";
+import { STORAGE_KEYS, deleteStoredRecord, readStored, readStoredRecords, subscribeToStoredRecords, writeStored } from "../lib/database";
+import { supabase } from "../lib/supabase";
 
 const LEADS_KEY = STORAGE_KEYS.leads;
 const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
@@ -70,21 +71,51 @@ export default function AdminPortal({
   onDeleteProperty,
   onResetDefaults,
 }: AdminPortalProps) {
+  const hasAdminRole = (user: { app_metadata?: Record<string, unknown> } | null | undefined) =>
+    user?.app_metadata?.role === "admin";
   const [leads, setLeads] = useState<Lead[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [tab, setTab] = useState<Tab>("upload");
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [unlocked, setUnlocked] = useState(() => load(ADMIN_SESSION_KEY, false));
-  const [pin, setPin] = useState("");
+  const [unlocked, setUnlocked] = useState<boolean>(() => !supabase && load(ADMIN_SESSION_KEY, false));
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [pinError, setPinError] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
-    setLeads(load<Lead[]>(LEADS_KEY, []));
-    setInspections(load<Inspection[]>(INSPECTIONS_KEY, []));
+    if (!unlocked) return;
+    let active = true;
+    void Promise.all([
+      readStoredRecords<Lead>(LEADS_KEY),
+      readStoredRecords<Inspection>(INSPECTIONS_KEY),
+    ]).then(([savedLeads, savedInspections]) => {
+      if (!active) return;
+      setLeads(savedLeads);
+      setInspections(savedInspections);
+    });
+
+    const unsubscribe = subscribeToStoredRecords([LEADS_KEY, INSPECTIONS_KEY], (key, value) => {
+      if (key === LEADS_KEY) setLeads(value as Lead[]);
+      if (key === INSPECTIONS_KEY) setInspections(value as Inspection[]);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase.auth.getSession().then(({ data }) => setUnlocked(hasAdminRole(data.session?.user)));
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUnlocked(hasAdminRole(session?.user));
+    });
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
   const notify = (msg: string) => {
@@ -92,10 +123,23 @@ export default function AdminPortal({
     setTimeout(() => setToast(null), 2500);
   };
 
-  const unlock = () => {
-    if (pin === ADMIN_PIN) {
+  const unlock = async () => {
+    if (supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && hasAdminRole(data.user)) {
+        setUnlocked(true);
+        setPassword("");
+        setPinError(false);
+        return;
+      }
+      if (!error) await supabase.auth.signOut();
+      setPinError(true);
+      return;
+    }
+
+    if (password === ADMIN_PIN) {
       setUnlocked(true);
-      setPin("");
+      setPassword("");
       setPinError(false);
       save(ADMIN_SESSION_KEY, true);
     } else {
@@ -103,24 +147,28 @@ export default function AdminPortal({
     }
   };
 
-  const lock = () => {
+  const lock = async () => {
     setUnlocked(false);
-    setPin("");
-    save(ADMIN_SESSION_KEY, false);
+    setPassword("");
+    if (supabase) {
+      await supabase.auth.signOut();
+    } else {
+      save(ADMIN_SESSION_KEY, false);
+    }
     notify("Session locked");
   };
 
   const deleteLead = (id: string) => {
     const next = leads.filter((l) => l.id !== id);
     setLeads(next);
-    save(LEADS_KEY, next);
+    deleteStoredRecord(LEADS_KEY, id);
     notify("Lead deleted");
   };
 
   const deleteInspection = (id: string) => {
     const next = inspections.filter((i) => i.id !== id);
     setInspections(next);
-    save(INSPECTIONS_KEY, next);
+    deleteStoredRecord(INSPECTIONS_KEY, id);
     notify("Inspection request deleted");
   };
 
@@ -181,8 +229,9 @@ export default function AdminPortal({
             </div>
           </div>
           <p className="mt-5 text-sm leading-relaxed text-slate-400">
-            Enter the Super Admin PIN to unlock building uploads, pricing controls, leads and
-            inspection management.
+            {supabase
+              ? "Sign in with the Supabase admin account to manage listings, images, leads and inspections."
+              : "Enter the local admin PIN. Configure Supabase to enable cloud database and image storage."}
           </p>
           <form
             onSubmit={(e) => {
@@ -191,20 +240,30 @@ export default function AdminPortal({
             }}
             className="mt-4"
           >
+            {supabase && (
+              <input
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setPinError(false); }}
+                placeholder="Admin email"
+                className="mb-2 h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-[#D4AF37]"
+                autoFocus
+              />
+            )}
             <input
               type="password"
-              inputMode="numeric"
-              maxLength={6}
-              value={pin}
+              autoComplete="current-password"
+              value={password}
               onChange={(e) => {
-                setPin(e.target.value);
+                setPassword(e.target.value);
                 setPinError(false);
               }}
-              placeholder="Super Admin PIN"
-              className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-center text-lg tracking-[0.4em] text-white placeholder-slate-600 outline-none transition focus:border-[#D4AF37]"
-              autoFocus
+              placeholder={supabase ? "Admin password" : "Local admin PIN"}
+              className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-center text-lg text-white placeholder-slate-600 outline-none transition focus:border-[#D4AF37]"
+              autoFocus={!supabase}
             />
-            {pinError && <p className="mt-2 text-xs font-semibold text-red-400">Incorrect PIN. Try again.</p>}
+            {pinError && <p className="mt-2 text-xs font-semibold text-red-400">Sign-in failed. Check your credentials and Supabase Auth setup.</p>}
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -247,7 +306,7 @@ export default function AdminPortal({
               <h2 className="font-serif text-lg font-bold text-white">Night Light Connect — Super Admin</h2>
               <p className="flex items-center gap-1.5 text-xs text-slate-500">
                 <ShieldCheck weight="duotone" className="h-3.5 w-3.5 text-[#EAB308]" />
-                Building & pricing control center (local storage)
+                Building & pricing control center (live database sync)
               </p>
             </div>
           </div>

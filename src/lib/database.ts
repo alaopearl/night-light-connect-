@@ -7,7 +7,13 @@ export const STORAGE_KEYS = {
   leads: "nlc_leads",
   inspections: "nlc_inspections",
   customProperties: "nlc_custom_properties",
+  deletedProperties: "nlc_deleted_properties",
   adminSession: "nlc_admin_unlocked",
+} as const;
+
+const REQUEST_TABLES = {
+  [STORAGE_KEYS.leads]: "site_leads",
+  [STORAGE_KEYS.inspections]: "site_inspections",
 } as const;
 
 function parseStored<T>(raw: string | null, fallback: T): T {
@@ -93,7 +99,77 @@ export function writeStored(key: string, value: unknown) {
   }
 
   void saveToIndexedDb(key, value);
-  void saveToSupabase(key, value);
+  if (!(key in REQUEST_TABLES)) void saveToSupabase(key, value);
+}
+
+export function appendStoredRecord<T extends { id: string; createdAt?: string }>(key: string, record: T) {
+  const records = readStored<T[]>(key, []);
+  if (!records.some((item) => item.id === record.id)) writeStored(key, [...records, record]);
+
+  const table = REQUEST_TABLES[key as keyof typeof REQUEST_TABLES];
+  if (supabase && table) {
+    void supabase.from(table).insert({
+      id: record.id,
+      value: record,
+      created_at: record.createdAt ?? new Date().toISOString(),
+    }).then(({ error }) => {
+      if (error) console.warn(`Supabase ${table} insert failed:`, error.message);
+    });
+  }
+}
+
+export async function readStoredRecords<T>(key: string, fallback: T[] = []): Promise<T[]> {
+  const table = REQUEST_TABLES[key as keyof typeof REQUEST_TABLES];
+  if (supabase && table) {
+    try {
+      const { data, error } = await supabase.from(table).select("value").order("created_at", { ascending: false });
+      if (!error && data?.length) return data.map((row) => row.value as T);
+      if (!error && data) return readStored<T[]>(key, fallback);
+      if (error) console.warn(`Supabase ${table} read failed:`, error.message);
+    } catch (error) {
+      console.warn(`Supabase ${table} read failed:`, error);
+    }
+  }
+  return readStored<T[]>(key, fallback);
+}
+
+export function deleteStoredRecord(key: string, id: string) {
+  const table = REQUEST_TABLES[key as keyof typeof REQUEST_TABLES];
+  const records = readStored<{ id: string }[]>(key, []).filter((record) => record.id !== id);
+  writeStored(key, records);
+
+  if (supabase && table) {
+    void supabase.from(table).delete().eq("id", id).then(({ error }) => {
+      if (error) console.warn(`Supabase ${table} delete failed:`, error.message);
+    });
+  }
+}
+
+export function subscribeToStoredRecords(
+  keys: string[],
+  onChange: (key: string, value: unknown[]) => void
+) {
+  if (!supabase) return () => undefined;
+
+  const channels = keys.flatMap((key) => {
+    const table = REQUEST_TABLES[key as keyof typeof REQUEST_TABLES];
+    if (!table) return [];
+    const channel = supabase
+      .channel(`${table}-changes`)
+      .on("postgres_changes", { event: "*", schema: "public", table }, () => {
+        void readStoredRecords<unknown>(key).then((records) => onChange(key, records));
+      })
+      .subscribe((status, error) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn(`Supabase ${table} Realtime subscription failed:`, error);
+        }
+      });
+    return [channel];
+  });
+
+  return () => {
+    channels.forEach((channel) => void supabase?.removeChannel(channel));
+  };
 }
 
 export function clearStored(key: string) {
@@ -103,7 +179,11 @@ export function clearStored(key: string) {
     // Ignore storage errors.
   }
 
-  void saveToSupabase(key, null);
+  void (async () => {
+    if (!supabase) return;
+    const { error } = await supabase.from("site_data").delete().eq("key", key);
+    if (error) console.warn("Supabase delete failed:", error.message);
+  })();
 
   void (async () => {
     try {
@@ -115,6 +195,42 @@ export function clearStored(key: string) {
       // Ignore cleanup errors.
     }
   })();
+}
+
+export function subscribeToStoredKeys(
+  keys: string[],
+  onChange: (key: string, value: unknown) => void
+) {
+  if (!supabase) return () => undefined;
+
+  const keySet = new Set(keys);
+  const channel = supabase
+    .channel(`site-data-${keys.join("-")}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "site_data" },
+      (payload) => {
+        const record = payload.new as { key?: string; value?: unknown };
+        if (record.key && keySet.has(record.key)) {
+          onChange(record.key, record.value);
+          return;
+        }
+
+        const oldRecord = payload.old as { key?: string };
+        if (payload.eventType === "DELETE" && oldRecord.key && keySet.has(oldRecord.key)) {
+          onChange(oldRecord.key, undefined);
+        }
+      }
+    )
+    .subscribe((status, error) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("Supabase Realtime subscription failed:", error);
+      }
+    });
+
+  return () => {
+    void supabase?.removeChannel(channel);
+  };
 }
 
 export async function readPersistedRecord<T>(key: string, fallback: T): Promise<T> {

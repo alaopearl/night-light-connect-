@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { Property, PropertyType, Purpose, PromoBadge } from "../types";
 import { TITLE_TYPES, PRICE_UNITS, PROMO_BADGES, PRESET_IMAGES, LOCATIONS } from "../constants";
 import { supabase } from "../lib/supabase";
-import { X, Plus, UploadSimple, ImageSquare, CurrencyNgn, LinkSimple, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
+import { X, Plus, UploadSimple, ImageSquare, CurrencyNgn, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
 
 interface AdminUploadFormProps {
   initial?: Property | null;
@@ -30,7 +30,6 @@ interface Draft {
   featured: boolean;
   published: boolean;
   imageUrls: string[];
-  newImageUrl: string;
   description: string;
   featureInput: string;
   features: string[];
@@ -43,7 +42,7 @@ function emptyDraft(): Draft {
     priceNumeric: 0, priceUnit: "outright", discountPrice: 0, badge: "",
     beds: 0, baths: 0, toilets: 0, areaSqm: 0, titleType: "C of O",
     status: "available", featured: false, published: true,
-    imageUrls: [], newImageUrl: "", description: "", featureInput: "", features: [], videoUrl: "",
+    imageUrls: [], description: "", featureInput: "", features: [], videoUrl: "",
   };
 }
 
@@ -68,6 +67,8 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
   const [d, setD] = useState<Draft>(initial ? draftFrom(initial) : emptyDraft());
   const [imgIdx, setImgIdx] = useState(0);
   const [libOpen, setLibOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setD((prev) => ({ ...prev, [key]: value }));
 
@@ -81,40 +82,52 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
 
-    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-    if (validFiles.length === 0) return;
-
+    const remainingSlots = Math.max(0, 8 - d.imageUrls.length);
+    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/")).slice(0, remainingSlots);
+    if (validFiles.length === 0) {
+      setUploadMessage(remainingSlots === 0 ? "You can upload up to 8 photos." : "Choose image files to upload.");
+      return;
+    }
     if (!supabase) {
-      validFiles.forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => addImages([String(reader.result)]);
-        reader.readAsDataURL(file);
-      });
+      setUploadMessage("Supabase is not configured. Set the project URL and publishable key to upload photos.");
       return;
     }
 
     const uploadedUrls: string[] = [];
+    let failedUploads = 0;
 
     const bucketName = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
+    setUploading(true);
+    setUploadMessage(null);
+    try {
+      for (const file of validFiles) {
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^a-zA-Z0-9.-]+/g, "-")}`;
+        const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-    for (const file of validFiles) {
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/\s+/g, "-")}`;
-      const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
+        if (error) {
+          console.error("Failed to upload image to Supabase Storage:", error);
+          failedUploads += 1;
+          continue;
+        }
 
-      if (error) {
-        console.error("Failed to upload image to S3-compatible storage:", error);
-        continue;
+        const publicUrl = supabase.storage.from(bucketName).getPublicUrl(data.path).data.publicUrl;
+        uploadedUrls.push(publicUrl);
       }
 
-      const publicUrl = supabase.storage.from(bucketName).getPublicUrl(data.path).data.publicUrl;
-      uploadedUrls.push(publicUrl);
-    }
-
-    if (uploadedUrls.length) {
-      addImages(uploadedUrls);
+      if (uploadedUrls.length) addImages(uploadedUrls);
+      setUploadMessage(
+        failedUploads
+          ? `${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded; ${failedUploads} failed. Check the bucket policies.`
+          : `${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded to ${bucketName}.`
+      );
+    } catch (error) {
+      console.error("Supabase Storage upload request failed:", error);
+      setUploadMessage("Photo upload failed. Check your connection, bucket, and Storage policies.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -183,7 +196,7 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
       <div>
         <p className={labelCls}>Photos (max 8)</p>
         <div className="relative overflow-hidden rounded-2xl border border-white/10">
-          <img src={previews[Math.min(imgIdx, previews.length - 1)]} alt="" className="h-52 w-full object-cover" />
+          <img src={previews[Math.min(imgIdx, previews.length - 1)]} alt="" className="h-52 w-full object-cover" loading="lazy" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
             <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">
@@ -200,19 +213,20 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={() => fileRef.current?.click()} className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-4 text-sm font-bold text-[#080E1A] transition hover:brightness-110">
-            <UploadSimple weight="bold" className="h-4 w-4" /> Upload photos
+          <button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-4 text-sm font-bold text-[#080E1A] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60">
+            <UploadSimple weight="bold" className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload photos"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
           <button onClick={() => setLibOpen((v) => !v)} className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${libOpen ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#EAB308]" : "border-white/10 text-slate-300 hover:border-[#EAB308]/50 hover:text-[#EAB308]"}`}>
             <ImageSquare weight="bold" className="h-4 w-4" /> Preset library
           </button>
         </div>
+        {uploadMessage && <p role="status" className="mt-2 text-xs text-slate-300">{uploadMessage}</p>}
         {libOpen && (
           <div className="mt-3 grid grid-cols-5 gap-2">
             {PRESET_IMAGES.map((u) => (
               <button key={u} onClick={() => addImages([u])} className={`relative overflow-hidden rounded-lg border-2 transition ${d.imageUrls.includes(u) ? "border-[#D4AF37]" : "border-transparent hover:border-white/30"}`}>
-                <img src={u} alt="" className="h-14 w-full object-cover" />
+                <img src={u} alt="" className="h-14 w-full object-cover" loading="lazy" decoding="async" />
                 {d.imageUrls.includes(u) && (
                   <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4AF37] text-[#080E1A]">
                     <Check weight="bold" className="h-2.5 w-2.5" />
@@ -226,7 +240,7 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
           <div className="mt-3 flex flex-wrap gap-2">
             {d.imageUrls.map((u, i) => (
               <span key={`${i}-${u.slice(0, 24)}`} className="relative">
-                <img src={u} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                <img src={u} alt="" className="h-14 w-14 rounded-lg object-cover" loading="lazy" decoding="async" />
                 <button onClick={() => removeImage(u)} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600" aria-label="Remove image">
                   <X weight="bold" className="h-3 w-3" />
                 </button>
@@ -234,22 +248,6 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
             ))}
           </div>
         )}
-        <div className="mt-3 flex gap-2">
-          <input
-            value={d.newImageUrl}
-            onChange={(e) => set("newImageUrl", e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && d.newImageUrl.trim()) { e.preventDefault(); addImages([d.newImageUrl.trim()]); set("newImageUrl", ""); } }}
-            placeholder="Paste an image URL and press Enter…"
-            className={inputCls}
-          />
-          <button
-            onClick={() => { if (d.newImageUrl.trim()) { addImages([d.newImageUrl.trim()]); set("newImageUrl", ""); } }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:border-[#EAB308]/50 hover:text-[#EAB308]"
-            aria-label="Add image URL"
-          >
-            <LinkSimple weight="bold" className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       <div className="space-y-4">

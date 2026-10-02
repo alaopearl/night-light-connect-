@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Property, Filters } from "../types";
 import { LOCATIONS, TYPES, PURPOSES, BED_OPTIONS, WHATSAPP_LINK, PHONE_LINK } from "../constants";
@@ -28,6 +28,7 @@ interface PropertiesSectionProps {
   properties: Property[];
   onInspect: (property: Property) => void;
   onNavigateProps: (id: string) => void;
+  initialSearch: string;
 }
 
 const PRICE_RANGES = [
@@ -48,9 +49,13 @@ const EMPTY_FILTERS: Filters = {
   beds: "Any Beds",
 };
 
-export default function PropertiesSection({ properties, onInspect, onNavigateProps }: PropertiesSectionProps) {
+export default function PropertiesSection({ properties, onInspect, onNavigateProps, initialSearch }: PropertiesSectionProps) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    setFilters((current) => ({ ...current, search: initialSearch }));
+  }, [initialSearch]);
 
   const filtered = useMemo(() => {
     return properties.filter((p) => {
@@ -252,6 +257,8 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
               key={imgIdx}
               src={images[imgIdx].url}
               alt={images[imgIdx].alt}
+              loading="lazy"
+              decoding="async"
               initial={{ opacity: 0, scale: 1.06 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
@@ -401,6 +408,8 @@ function PropertyModal({
                   key={currentImage}
                   src={images[currentImage].url}
                   alt={images[currentImage].alt}
+                  loading="lazy"
+                  decoding="async"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}

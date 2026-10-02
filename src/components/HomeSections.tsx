@@ -18,6 +18,7 @@ import {
   Users,
   HandCoins,
   ArrowRight,
+  CalendarPlus,
   CaretLeft,
   CaretRight,
   Clock,
@@ -41,238 +42,254 @@ interface HomeSectionsProps {
   onNavigate: (id: string) => void;
 }
 
-export function Hero({ properties, onInspect, onPropertyClick }: Pick<HomeSectionsProps, "properties" | "onInspect" | "onPropertyClick">) {
+export function Hero({ properties, onInspect, onPropertyClick, onSearch }: Pick<HomeSectionsProps, "properties" | "onInspect" | "onPropertyClick"> & { onSearch: (query: string) => void }) {
   const featured = properties.filter((p) => p.featured);
   const [idx, setIdx] = useState(0);
   const [search, setSearch] = useState("");
   const current = featured.length > 0 ? featured[idx % featured.length] : properties[0];
 
   const suggestions = search.trim()
-    ? featured
+    ? properties
         .filter((p) => `${p.title} ${p.location} ${p.area} ${p.type}`.toLowerCase().includes(search.toLowerCase()))
-        .slice(0, 3)
+        .slice(0, 4)
     : [];
 
   return (
-    <section id="home" className="relative flex min-h-[100svh] items-center overflow-hidden bg-[#080E1A]">
-      {/* Background */}
-      <div className="absolute inset-0">
-        <AnimatedSlide url={current?.images[0]?.url} />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#080E1A]/95 via-[#080E1A]/75 to-[#080E1A]/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080E1A] via-transparent to-[#080E1A]/70" />
-        <div className="pointer-events-none absolute -left-24 top-1/4 h-96 w-96 rounded-full bg-[#D4AF37]/10 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto grid w-full max-w-7xl gap-10 px-4 pb-24 pt-28 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-8">
-        {/* Copy */}
-        <div>
+    <section id="home" className="relative overflow-hidden bg-[#F3F0E7] pt-16 text-[#102018]">
+      <div className="mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl gap-8 px-4 py-7 sm:px-6 sm:py-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-12 lg:px-8 lg:py-12">
+        <div className="flex flex-col justify-center py-5 lg:py-10">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#8A6817]"
           >
-            <span className="flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#EAB308]">
-              <Sparkle weight="fill" className="h-3 w-3" />
-              Nigeria's Trusted Nationwide Real Estate Partner
-            </span>
+            <span className="h-px w-8 bg-[#B8860B]" />
+            Nigeria, seen differently
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.55, ease: "easeOut" }}
-            className="mt-6 font-serif text-4xl font-bold leading-[1.08] text-white sm:text-5xl lg:text-6xl"
+            className="mt-6 max-w-2xl font-serif text-5xl font-semibold leading-[0.98] text-[#102018] sm:text-6xl lg:text-[4.25rem]"
           >
-            Find a Place You'll Be <span className="bg-gradient-to-r from-[#F5D97A] via-[#D4AF37] to-[#B8860B] bg-clip-text text-transparent">Proud to Call
-            Home</span>, Anywhere in Nigeria.
+            Find a place you&apos;ll be <span className="font-normal italic text-[#A87912]">proud to call home.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.55, ease: "easeOut" }}
-            className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg"
+            className="mt-5 max-w-lg text-base leading-relaxed text-[#59665D] sm:text-lg"
           >
-            From luxury homes in Lagos and Abuja to verified land and commercial spaces in
-            Port Harcourt, Ibadan, Enugu and beyond — we connect you to genuinely verified
-            opportunities across all 36 states and the FCT.
+            Thoughtfully verified homes, land and investment opportunities, from Lagos to all 36 states and the FCT.
           </motion.p>
 
-          {/* Quick search */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.55, ease: "easeOut" }}
-            className="relative mt-8 max-w-xl"
+            className="relative z-20 mt-8 max-w-xl"
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 backdrop-blur-xl">
-              <MagnifyingGlass weight="bold" className="ml-3 h-5 w-5 shrink-0 text-[#EAB308]" />
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSearch(search.trim());
+                document.getElementById("properties")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex min-h-16 items-center gap-2 border-b-2 border-[#102018] bg-white p-2 pl-4 shadow-[0_12px_34px_rgba(16,32,24,0.08)] sm:gap-3"
+            >
+              <MagnifyingGlass weight="bold" className="h-5 w-5 shrink-0 text-[#A87912]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search duplexes, land, apartments in Lagos, Abuja, Port Harcourt…"
-                className="h-11 w-full bg-transparent text-sm text-white placeholder-slate-500 outline-none"
+                placeholder="Try “Lekki duplex” or “land in Abuja”"
+                aria-label="Search verified properties"
+                className="h-11 min-w-0 flex-1 bg-transparent text-sm text-[#102018] placeholder-[#8A938B] outline-none"
               />
               <button
-                onClick={() => document.getElementById("properties")?.scrollIntoView({ behavior: "smooth" })}
-                className="shrink-0 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-5 py-2.5 text-sm font-bold text-[#080E1A] transition hover:brightness-110"
+                type="submit"
+                className="flex h-11 shrink-0 items-center gap-2 bg-[#102018] px-3.5 text-sm font-semibold text-white transition hover:bg-[#244334] sm:px-5"
               >
-                Search
+                <span className="hidden sm:inline">Find a place</span>
+                <ArrowRight weight="bold" className="h-4 w-4" />
               </button>
-            </div>
+            </form>
             {suggestions.length > 0 && (
-              <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#0F172A]/95 shadow-2xl backdrop-blur-xl">
+              <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden border border-[#D8D7CD] bg-white shadow-2xl">
                 {suggestions.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => onPropertyClick(p)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/5"
+                    onClick={() => {
+                      setSearch(p.title);
+                      onSearch(p.title);
+                      document.getElementById("properties")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-[#E9E7DE] px-4 py-3 text-left transition last:border-0 hover:bg-[#F3F0E7]"
                   >
-                    <img src={p.images[0]?.url} alt="" className="h-11 w-14 rounded-lg object-cover" />
+                    <img src={p.images[0]?.url} alt="" className="h-11 w-14 rounded-lg object-cover" loading="lazy" decoding="async" />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-white">{p.title}</span>
-                      <span className="block text-xs text-[#EAB308]">{p.price}</span>
+                      <span className="block truncate text-sm font-semibold text-[#102018]">{p.title}</span>
+                      <span className="block text-xs text-[#8A6817]">{p.area}, {p.location} · {p.price}</span>
                     </span>
                   </button>
                 ))}
               </div>
             )}
+            <div className="mt-3 hidden flex-wrap items-center gap-2 text-xs sm:flex">
+              <span className="mr-1 font-medium text-[#68736B]">Popular:</span>
+              {["Lagos", "Abuja", "Land"].map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => {
+                    setSearch(term);
+                    onSearch(term);
+                    document.getElementById("properties")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="border border-[#D7D5CB] px-2.5 py-1.5 text-[#35453A] transition hover:border-[#A87912] hover:text-[#8A6817]"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
           </motion.div>
 
-          {/* Critical contact buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.55, ease: "easeOut" }}
-            className="mt-6 flex flex-wrap items-center gap-3"
+            className="mt-7 flex flex-wrap items-center gap-3"
           >
             <a
               href={WHATSAPP_LINK("Hello Night Light Connect! I’d like to enquire about your properties.")}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#25D366] to-[#128C7E] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:brightness-110"
+              className="flex items-center gap-2 bg-[#147D58] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0F6245]"
             >
               <WhatsappLogo weight="fill" className="h-5 w-5" />
               Chat Now — 09133172414
             </a>
             <a
               href={PHONE_LINK}
-              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:border-[#EAB308]/50 hover:text-[#EAB308]"
+              className="flex items-center gap-2 border border-[#C7C6BA] px-5 py-3 text-sm font-bold text-[#24372B] transition hover:border-[#102018] hover:bg-white"
             >
               <Phone weight="bold" className="h-5 w-5" />
               Call — 07080210062
             </a>
           </motion.div>
 
-          {/* Trust ticks */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.55, duration: 0.5 }}
-            className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-400"
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="mt-8 hidden max-w-lg grid-cols-3 border-t border-[#D6D3C8] pt-4 sm:grid"
           >
-            {["Title-verified listings nationwide", "36 states & FCT coverage", "Diaspora-friendly process"].map((t) => (
-              <span key={t} className="flex items-center gap-1.5">
-                <Check weight="bold" className="h-3.5 w-3.5 text-emerald-400" /> {t}
-              </span>
-            ))}
+            <div>
+              <p className="font-serif text-2xl font-semibold text-[#102018]">36<span className="text-[#A87912]">+</span></p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[#68736B]">States covered</p>
+            </div>
+            <div className="border-l border-[#D6D3C8] pl-4">
+              <ShieldCheck weight="duotone" className="h-6 w-6 text-[#A87912]" />
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[#68736B]">Title checked</p>
+            </div>
+            <div className="border-l border-[#D6D3C8] pl-4">
+              <MapPinArea weight="duotone" className="h-6 w-6 text-[#A87912]" />
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[#68736B]">Nigeria wide</p>
+            </div>
           </motion.div>
         </div>
 
-        {/* Featured slider card */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
-          className="relative mx-auto w-full max-w-lg lg:max-w-none"
+          transition={{ delay: 0.25, duration: 0.65, ease: "easeOut" }}
+          className="relative mx-auto w-full max-w-2xl lg:max-w-none"
         >
           {current && (
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/40">
-              <img
+            <div className="relative min-h-[390px] overflow-hidden bg-[#25382C] sm:min-h-[500px] lg:min-h-[min(72vh,720px)]">
+              <motion.img
+                key={current.id}
                 src={current.images[0]?.url}
                 alt={current.title}
-                className="h-80 w-full object-cover sm:h-[420px]"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="eager"
+                decoding="async"
+                initial={{ opacity: 0, scale: 1.025 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute left-4 top-4 flex gap-2">
-                <span className="rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#080E1A]">
-                  Featured
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07120D]/90 via-[#07120D]/5 to-[#07120D]/15" />
+              <div className="absolute left-4 right-4 top-4 flex items-start justify-between sm:left-6 sm:right-6 sm:top-6">
+                <span className="flex items-center gap-2 bg-[#F3F0E7] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#102018]">
+                  <ShieldCheck weight="fill" className="h-4 w-4 text-[#A87912]" /> Verified spotlight
                 </span>
-                <span className="rounded-full bg-[#080E1A]/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur">
-                  {current.type}
-                </span>
+                {featured.length > 1 && <span className="bg-[#07120D]/55 px-3 py-2 text-xs font-semibold text-white backdrop-blur">{String((idx % featured.length) + 1).padStart(2, "0")} / {String(featured.length).padStart(2, "0")}</span>}
               </div>
-              <div className="absolute inset-x-0 bottom-0 p-6">
-                <p className="font-serif text-2xl font-bold text-[#EAB308]">{current.price}</p>
-                <h3 className="mt-1 font-serif text-xl font-bold leading-snug text-white">{current.title}</h3>
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-300">
-                  <MapPin weight="bold" className="h-4 w-4 text-[#EAB308]" /> {current.area}, {current.location}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                  <button
-                    onClick={() => onPropertyClick(current)}
-                    className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-[#080E1A] transition hover:bg-[#F5D97A]"
-                  >
-                    View Details <ArrowRight weight="bold" className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onInspect(current)}
-                    className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
-                  >
-                    <Clock weight="bold" className="h-4 w-4" /> Inspect
-                  </button>
+              <div className="absolute inset-x-0 bottom-0 flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
+                <div className="max-w-lg">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#F0CE70]">{current.type} · {current.purpose === "sale" ? "For sale" : "For rent"}</p>
+                  <h2 className="mt-2 font-serif text-2xl font-semibold leading-tight text-white sm:text-3xl">{current.title}</h2>
+                  <p className="mt-2 flex items-center gap-1.5 text-sm text-white/80">
+                    <MapPin weight="bold" className="h-4 w-4 text-[#F0CE70]" /> {current.area}, {current.location}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center justify-between gap-5 sm:flex-col sm:items-end sm:gap-3">
+                  <p className="font-serif text-xl font-semibold text-[#F0CE70]">{current.price}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onPropertyClick(current)}
+                      className="flex h-10 items-center gap-2 bg-white px-4 text-xs font-bold text-[#102018] transition hover:bg-[#F0CE70]"
+                    >
+                      View home <ArrowRight weight="bold" className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onInspect(current)}
+                      className="flex h-10 items-center justify-center border border-white/70 px-3 text-white transition hover:bg-white/15"
+                      aria-label="Schedule inspection"
+                    >
+                      <CalendarPlus weight="bold" className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {/* Arrows */}
-              <button
-                onClick={() => setIdx((i) => (i - 1 + featured.length) % featured.length)}
-                className="absolute right-16 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/25"
-                aria-label="Previous featured property"
-              >
-                <CaretLeft weight="bold" className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setIdx((i) => (i + 1) % featured.length)}
-                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/25"
-                aria-label="Next featured property"
-              >
-                <CaretRight weight="bold" className="h-4 w-4" />
-              </button>
+              {featured.length > 1 && (
+                <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
+                  <button
+                    onClick={() => setIdx((i) => (i - 1 + featured.length) % featured.length)}
+                    className="flex h-10 w-10 items-center justify-center border border-white/50 bg-[#07120D]/35 text-white backdrop-blur transition hover:bg-[#07120D]/70"
+                    aria-label="Previous featured property"
+                  >
+                    <CaretLeft weight="bold" className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setIdx((i) => (i + 1) % featured.length)}
+                    className="flex h-10 w-10 items-center justify-center border border-white/50 bg-[#07120D]/35 text-white backdrop-blur transition hover:bg-[#07120D]/70"
+                    aria-label="Next featured property"
+                  >
+                    <CaretRight weight="bold" className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
-          <div className="mt-4 flex justify-center gap-2">
-            {featured.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                className={`h-1.5 rounded-full transition-all ${i === idx % featured.length ? "w-6 bg-[#EAB308]" : "w-2.5 bg-white/25"}`}
-                aria-label={`Go to slide ${i + 1}`}
-              />
-            ))}
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#68736B]">A considered collection of Nigerian property</p>
+            <div className="flex gap-1.5">
+              {featured.map((property, i) => (
+                <button
+                  key={property.id}
+                  onClick={() => setIdx(i)}
+                  className={`h-1.5 transition-all ${i === idx % featured.length ? "w-7 bg-[#A87912]" : "w-3 bg-[#C7C6BA] hover:bg-[#8A6817]"}`}
+                  aria-label={`Show featured property ${i + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </motion.div>
       </div>
     </section>
-  );
-}
-
-function AnimatedSlide({ url }: { url?: string }) {
-  return (
-    <motion.div
-      key={url}
-      initial={{ opacity: 0, scale: 1.08 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 1.2, ease: "easeOut" }}
-      className="h-full w-full"
-    >
-      {url ? (
-        <img src={url} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <div className="h-full w-full bg-gradient-to-br from-[#0F1B33] to-[#080E1A]" />
-      )}
-    </motion.div>
   );
 }
 
@@ -295,6 +312,8 @@ export function About({ onNavigate }: { onNavigate: (id: string) => void }) {
                 src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1400&q=80"
                 alt="Night Light Connect real estate agents at work"
                 className="h-[420px] w-full object-cover sm:h-[500px]"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -bottom-6 -right-2 rounded-2xl border border-[#D4AF37]/30 bg-[#080E1A] p-5 shadow-2xl sm:-right-6">

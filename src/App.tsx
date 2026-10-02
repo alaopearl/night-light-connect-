@@ -17,33 +17,82 @@ import {
   Contact,
 } from "./components/HomeSections";
 import { Phone, MapPin, Check, X, CalendarCheck } from "@phosphor-icons/react";
-import { STORAGE_KEYS, readStored, writeStored } from "./lib/database";
+import { appendStoredRecord, STORAGE_KEYS, readPersistedRecord, readStored, subscribeToStoredKeys, writeStored } from "./lib/database";
+import { supabase } from "./lib/supabase";
 
 const LEADS_KEY = STORAGE_KEYS.leads;
 const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
 const CUSTOM_PROPERTIES_KEY = STORAGE_KEYS.customProperties;
+const DELETED_PROPERTIES_KEY = STORAGE_KEYS.deletedProperties;
 
 export default function App() {
   const [customProperties, setCustomProperties] = useState<Property[]>(() =>
     readStored<Property[]>(CUSTOM_PROPERTIES_KEY, [])
   );
+  const [deletedPropertyIds, setDeletedPropertyIds] = useState<string[]>(() =>
+    readStored<string[]>(DELETED_PROPERTIES_KEY, [])
+  );
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [inspectTarget, setInspectTarget] = useState<Property | null>(null);
+  const [propertySearch, setPropertySearch] = useState("");
 
-  // Persist custom uploads to local storage.
   useEffect(() => {
-    writeStored(CUSTOM_PROPERTIES_KEY, customProperties);
-  }, [customProperties]);
+    let active = true;
+    void Promise.all([
+      readPersistedRecord<Property[]>(CUSTOM_PROPERTIES_KEY, []),
+      readPersistedRecord<string[]>(DELETED_PROPERTIES_KEY, []),
+    ]).then(([savedProperties, savedDeletedIds]) => {
+      if (!active) return;
+      setCustomProperties(savedProperties);
+      setDeletedPropertyIds(savedDeletedIds);
+      setCatalogLoaded(true);
+    });
 
-  // Catalog = defaults + custom uploads (customs win on id conflict).
-  const properties = useMemo(() => {
+    const unsubscribe = subscribeToStoredKeys(
+      [CUSTOM_PROPERTIES_KEY, DELETED_PROPERTIES_KEY],
+      (key, value) => {
+        if (key === CUSTOM_PROPERTIES_KEY && Array.isArray(value)) {
+          setCustomProperties(value as Property[]);
+        }
+        if (key === DELETED_PROPERTIES_KEY && Array.isArray(value)) {
+          setDeletedPropertyIds(value as string[]);
+        }
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  // Persist catalog changes only after remote state has been loaded.
+  useEffect(() => {
+    if (!catalogLoaded) return;
+    writeStored(CUSTOM_PROPERTIES_KEY, customProperties);
+  }, [catalogLoaded, customProperties]);
+
+  useEffect(() => {
+    if (!catalogLoaded) return;
+    writeStored(DELETED_PROPERTIES_KEY, deletedPropertyIds);
+  }, [catalogLoaded, deletedPropertyIds]);
+
+  // Deleted built-in listings stay deleted across reloads and devices.
+  const allProperties = useMemo(() => {
     const defaultIds = new Set(DEFAULT_PROPERTIES.map((p) => p.id));
     const custom = customProperties.filter((p) => !defaultIds.has(p.id));
     const overriddenIds = new Set(customProperties.map((p) => p.id));
-    return [...DEFAULT_PROPERTIES.filter((p) => !overriddenIds.has(p.id)), ...custom].filter(
-      (p) => p.published !== false
-    );
-  }, [customProperties]);
+    const deletedIds = new Set(deletedPropertyIds);
+    return [
+      ...DEFAULT_PROPERTIES.filter((p) => !overriddenIds.has(p.id) && !deletedIds.has(p.id)),
+      ...custom.filter((p) => !deletedIds.has(p.id)),
+    ];
+  }, [customProperties, deletedPropertyIds]);
+  const properties = useMemo(
+    () => allProperties.filter((property) => property.published !== false),
+    [allProperties]
+  );
 
   const navigate = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -68,8 +117,7 @@ export default function App() {
       propertyTitle: req.propertyTitle,
       createdAt: new Date().toISOString(),
     };
-    const list = readStored<unknown[]>(INSPECTIONS_KEY, []);
-    writeStored(INSPECTIONS_KEY, [...list, inspection]);
+    appendStoredRecord(INSPECTIONS_KEY, inspection);
 
     const lead: Lead = {
       id: `lead-${Date.now()}`,
@@ -81,8 +129,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
       source: "inspection",
     };
-    const leads = readStored<unknown[]>(LEADS_KEY, []);
-    writeStored(LEADS_KEY, [...leads, lead]);
+    appendStoredRecord(LEADS_KEY, lead);
 
     window.open(
       WHATSAPP_LINK(
@@ -99,12 +146,12 @@ export default function App() {
       createdAt: new Date().toISOString(),
       source: "contact",
     };
-    const leads = readStored<unknown[]>(LEADS_KEY, []);
-    writeStored(LEADS_KEY, [...leads, full]);
+    appendStoredRecord(LEADS_KEY, full);
   }, []);
 
   // --- Super Admin CRUD ---
   const addProperty = useCallback((p: Property) => {
+    setDeletedPropertyIds((prev) => prev.filter((id) => id !== p.id));
     setCustomProperties((prev) => {
       const existingIdx = prev.findIndex((x) => x.id === p.id);
       if (existingIdx >= 0) {
@@ -117,6 +164,7 @@ export default function App() {
   }, []);
 
   const updateProperty = useCallback((id: string, patch: Partial<Property>) => {
+    setDeletedPropertyIds((prev) => prev.filter((deletedId) => deletedId !== id));
     setCustomProperties((prev) => {
       const exists = prev.some((p) => p.id === id);
       if (exists) return prev.map((p) => (p.id === id ? { ...p, ...patch } : p));
@@ -127,11 +175,33 @@ export default function App() {
   }, []);
 
   const deleteProperty = useCallback((id: string) => {
+    const property = allProperties.find((item) => item.id === id);
     setCustomProperties((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+    setDeletedPropertyIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+    if (supabase && property) {
+      const bucket = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
+      const uploadedPaths = property.images.flatMap(({ url }) => {
+        try {
+          const pathname = new URL(url).pathname;
+          const marker = `/object/public/${bucket}/`;
+          const index = pathname.indexOf(marker);
+          return index >= 0 ? [decodeURIComponent(pathname.slice(index + marker.length))] : [];
+        } catch {
+          return [];
+        }
+      });
+      if (uploadedPaths.length) {
+        void supabase.storage.from(bucket).remove(uploadedPaths).then(({ error }) => {
+          if (error) console.warn("Property deleted, but uploaded photo cleanup failed:", error.message);
+        });
+      }
+    }
+  }, [allProperties]);
 
   const resetDefaults = useCallback(() => {
     setCustomProperties([]);
+    setDeletedPropertyIds([]);
   }, []);
 
   useEffect(() => {
@@ -147,11 +217,12 @@ export default function App() {
       <Navbar onNavigate={navigate} onAdmin={() => setAdminOpen(true)} />
 
       <main>
-        <Hero properties={properties} onInspect={handleInspect} onPropertyClick={openProperty} />
+        <Hero properties={properties} onInspect={handleInspect} onPropertyClick={openProperty} onSearch={setPropertySearch} />
         <PropertiesSection
           properties={properties}
           onInspect={handleInspect}
           onNavigateProps={navigate}
+          initialSearch={propertySearch}
         />
         <About onNavigate={navigate} />
         <NationwideHubs />
@@ -174,7 +245,7 @@ export default function App() {
               setAdminOpen(false);
               setInspectTarget(properties[0] ?? null);
             }}
-            properties={properties}
+            properties={allProperties}
             onAddProperty={addProperty}
             onUpdateProperty={updateProperty}
             onDeleteProperty={deleteProperty}
