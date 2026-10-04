@@ -71,8 +71,13 @@ export default function AdminPortal({
   onDeleteProperty,
   onResetDefaults,
 }: AdminPortalProps) {
-  const hasAdminRole = (user: { app_metadata?: Record<string, unknown> } | null | undefined) =>
-    user?.app_metadata?.role === "admin";
+  const hasAdminRole = (
+    user: { app_metadata?: Record<string, unknown> } | null | undefined
+  ) => {
+    const role = user?.app_metadata?.role;
+
+    return role === "admin" || role === "super_admin";
+  };
   const [leads, setLeads] = useState<Lead[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [tab, setTab] = useState<Tab>("upload");

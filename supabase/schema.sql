@@ -25,8 +25,8 @@ create policy "Authenticated admins manage site data"
   on public.site_data
   for all
   to authenticated
-  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
-  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+  using ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'))
+  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'));
 
 do $$
 begin
@@ -69,8 +69,8 @@ create policy "Public can submit leads"
   with check (true);
 create policy "Admins manage leads"
   on public.site_leads for all to authenticated
-  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
-  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+  using ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'))
+  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'));
 
 drop policy if exists "Public can submit inspections" on public.site_inspections;
 drop policy if exists "Admins manage inspections" on public.site_inspections;
@@ -79,8 +79,8 @@ create policy "Public can submit inspections"
   with check (true);
 create policy "Admins manage inspections"
   on public.site_inspections for all to authenticated
-  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
-  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+  using ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'))
+  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'));
 
 do $$
 declare
