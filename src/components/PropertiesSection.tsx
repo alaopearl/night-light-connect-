@@ -77,24 +77,24 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
     setFilters((f) => ({ ...f, [key]: value }));
 
   return (
-    <section id="properties" className="bg-[#F7F5F0] py-20 sm:py-24">
+    <section id="properties" className="bg-[#F3F0E7] py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#B8860B]">
-              Featured Listings
+            <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#8A6817]">
+              <span className="h-px w-7 bg-[#B8860B]" /> Curated listings
             </p>
-            <h2 className="mt-3 font-serif text-3xl font-bold text-[#080E1A] sm:text-4xl">
-              Handpicked Properties, <span className="text-[#B8860B]">Verified Titles</span>
+            <h2 className="mt-3 font-serif text-3xl font-semibold text-[#102018] sm:text-4xl">
+              Find the right place, <span className="font-normal italic text-[#A87912]">with confidence.</span>
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#59665D]">
               Every listing below passes our nationwide title audit before it goes live. Search across
               Lagos, Abuja, Port Harcourt, Ibadan, Enugu and more to find the home or land that fits your goals.
             </p>
           </div>
           <button
             onClick={() => onNavigateProps("why-us")}
-            className="group hidden items-center gap-2 text-sm font-semibold text-[#080E1A] transition hover:text-[#B8860B] lg:flex"
+            className="group hidden items-center gap-2 border-b border-[#A87912] pb-1 text-sm font-semibold text-[#24372B] transition hover:text-[#8A6817] lg:flex"
           >
             Why title verification matters
             <ArrowRight weight="bold" className="h-4 w-4 transition group-hover:translate-x-1" />
@@ -109,7 +109,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
               value={filters.search}
               onChange={(e) => update("search", e.target.value)}
               placeholder="Search by title, area, or location…"
-              className="h-13 w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 text-sm text-slate-800 shadow-sm outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+              className="h-13 w-full border border-[#D7D5CB] bg-white pl-12 pr-4 text-sm text-[#24372B] outline-none transition focus:border-[#A87912] focus:ring-2 focus:ring-[#A87912]/15"
             />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:flex">
@@ -127,7 +127,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
                   const v = e.target.value;
                   update(key, key === "purpose" ? (v === "For Sale" ? "sale" : v === "For Rent" ? "rent" : "All Purposes") : v);
                 }}
-                className="h-13 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#D4AF37]"
+                className="h-13 border border-[#D7D5CB] bg-white px-4 text-sm font-medium text-[#35453A] outline-none transition focus:border-[#A87912]"
               >
                 {options.map((o) => (
                   <option key={o} value={o}>
@@ -138,7 +138,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
             ))}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className="flex h-13 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#D4AF37] hover:text-[#B8860B]"
+              className="flex h-13 items-center justify-center gap-2 border border-[#D7D5CB] bg-white px-5 text-sm font-semibold text-[#35453A] transition hover:border-[#A87912] hover:text-[#8A6817]"
             >
               <SlidersHorizontal weight="bold" className="h-4 w-4" />
               More
@@ -156,7 +156,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
               transition={{ duration: 0.25, ease: "easeInOut" }}
               className="overflow-hidden"
             >
-              <div className="mt-3 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-3 grid gap-4 border border-[#D7D5CB] bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Price range</label>
                   <select
@@ -165,7 +165,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
                       const r = PRICE_RANGES[Number(e.target.value)] ?? PRICE_RANGES[0];
                       setFilters((f) => ({ ...f, minPrice: r.min, maxPrice: r.max }));
                     }}
-                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#D4AF37]"
+                    className="mt-2 h-11 w-full border border-[#D7D5CB] bg-white px-3 text-sm font-medium text-[#35453A] outline-none focus:border-[#A87912]"
                   >
                     {PRICE_RANGES.map((r, i) => (
                       <option key={r.label} value={i}>
@@ -179,7 +179,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
                   <select
                     value={filters.beds}
                     onChange={(e) => update("beds", e.target.value)}
-                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#D4AF37]"
+                    className="mt-2 h-11 w-full border border-[#D7D5CB] bg-white px-3 text-sm font-medium text-[#35453A] outline-none focus:border-[#A87912]"
                   >
                     {BED_OPTIONS.map((b) => (
                       <option key={b} value={b}>
@@ -191,7 +191,7 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
                 <div className="flex items-end">
                   <button
                     onClick={() => setFilters(EMPTY_FILTERS)}
-                    className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:border-[#D4AF37] hover:text-[#B8860B]"
+                    className="flex h-11 items-center gap-2 border border-[#D7D5CB] px-4 text-sm font-semibold text-[#59665D] transition hover:border-[#A87912] hover:text-[#8A6817]"
                   >
                     <ArrowClockwise weight="bold" className="h-4 w-4" />
                     Reset filters
@@ -203,20 +203,20 @@ export default function PropertiesSection({ properties, onInspect, onNavigatePro
         </AnimatePresence>
 
         {/* Result count */}
-        <p className="mt-6 text-sm text-slate-500">
-          Showing <span className="font-semibold text-[#080E1A]">{filtered.length}</span> of{" "}
-          <span className="font-semibold text-[#080E1A]">{properties.length}</span> properties
+        <p className="mt-7 border-t border-[#D7D5CB] pt-4 text-xs font-medium text-[#68736B]">
+          Showing <span className="font-bold text-[#102018]">{filtered.length}</span> of{" "}
+          <span className="font-bold text-[#102018]">{properties.length}</span> properties
         </p>
 
         {/* Grid */}
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
             <PropertyCard key={p.id} property={p} onInspect={onInspect} />
           ))}
         </div>
 
         {filtered.length === 0 && (
-          <div className="mt-12 rounded-3xl border border-dashed border-slate-300 bg-white/60 p-12 text-center">
+          <div className="mt-12 border border-dashed border-[#C7C6BA] bg-white/60 p-12 text-center">
             <MapTrifold weight="duotone" className="mx-auto h-10 w-10 text-slate-400" />
             <h3 className="mt-4 font-serif text-xl font-bold text-[#080E1A]">No properties found</h3>
             <p className="mt-2 text-sm text-slate-500">
@@ -249,7 +249,7 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-40px" }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-300/50"
+        className="group overflow-hidden border border-[#D7D5CB] bg-white transition duration-300 hover:-translate-y-0.5 hover:border-[#B8A56C] hover:shadow-[0_16px_40px_rgba(16,32,24,0.10)]"
       >
         <div className="relative h-60 overflow-hidden">
           <AnimatePresence mode="wait">
@@ -269,21 +269,21 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
           </AnimatePresence>
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-[#080E1A]/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#EAB308] backdrop-blur">
+            <span className="bg-[#102018]/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">
               {p.type}
             </span>
             {p.featured && (
-              <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#080E1A]">
+              <span className="flex items-center gap-1 bg-[#F0CE70] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#102018]">
                 <Fire weight="fill" className="h-3 w-3" /> Featured
               </span>
             )}
           </div>
           {p.status === "available" ? (
-            <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">
+            <span className="absolute right-3 top-3 flex items-center gap-1 bg-[#147D58]/95 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-white" /> Available
             </span>
           ) : (
-            <span className="absolute right-3 top-3 rounded-full bg-slate-700/90 px-3 py-1 text-[11px] font-semibold uppercase text-white backdrop-blur">
+            <span className="absolute right-3 top-3 bg-[#35453A]/95 px-2.5 py-1 text-[10px] font-semibold uppercase text-white backdrop-blur">
               {p.status}
             </span>
           )}
@@ -303,10 +303,10 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
           </button>
           <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-white/70">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/75">
                 {p.purpose === "sale" ? "For Sale" : "For Rent"} · {p.titleType}
               </p>
-              <h3 className="font-serif text-lg font-bold leading-snug text-white">
+              <h3 className="mt-1 font-serif text-lg font-semibold leading-snug text-white">
                 {p.title.length > 52 ? `${p.title.slice(0, 52)}…` : p.title}
               </h3>
             </div>
@@ -315,24 +315,24 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
         </div>
 
         <div className="p-5">
-          <p className="flex items-center gap-1.5 text-sm text-slate-500">
+          <p className="flex items-center gap-1.5 text-sm text-[#68736B]">
             <MapPin weight="bold" className="h-4 w-4 text-[#B8860B]" />
             {p.area}, {p.location}
           </p>
-          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-600">
+          <div className="mt-4 flex items-center justify-between border-t border-[#E9E7DE] pt-4">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#59665D]">
               {p.beds > 0 && (
                 <span className="flex items-center gap-1.5">
-                  <Bed weight="bold" className="h-4 w-4 text-[#B8860B]" /> {p.beds} Beds
+                  <Bed weight="bold" className="h-4 w-4 text-[#8A6817]" /> {p.beds} Beds
                 </span>
               )}
               {p.baths > 0 && (
                 <span className="flex items-center gap-1.5">
-                  <Bathtub weight="bold" className="h-4 w-4 text-[#B8860B]" /> {p.baths} Baths
+                  <Bathtub weight="bold" className="h-4 w-4 text-[#8A6817]" /> {p.baths} Baths
                 </span>
               )}
               <span className="flex items-center gap-1.5">
-                <Ruler weight="bold" className="h-4 w-4 text-[#B8860B]" /> {p.areaSqm} sqm
+                <Ruler weight="bold" className="h-4 w-4 text-[#8A6817]" /> {p.areaSqm} sqm
               </span>
             </div>
           </div>
@@ -341,20 +341,20 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
               href={WHATSAPP_LINK(`Hello Night Light Connect! I’m interested in "${p.title}" (${p.price}). Is it still available?`)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#25D366] to-[#128C7E] px-3 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+              className="flex items-center justify-center gap-2 bg-[#147D58] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0F6245]"
             >
               <WhatsappLogo weight="fill" className="h-4 w-4" /> Enquire
             </a>
             <button
               onClick={() => setOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-[#080E1A] px-3 py-2.5 text-sm font-semibold text-[#080E1A] transition hover:bg-[#080E1A] hover:text-white"
+              className="flex items-center justify-center gap-2 border border-[#C7C6BA] px-3 py-2.5 text-sm font-semibold text-[#24372B] transition hover:border-[#102018] hover:bg-[#102018] hover:text-white"
             >
               Details
             </button>
           </div>
           <button
             onClick={() => onInspect(p)}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#F3EEDF] px-3 py-2.5 text-sm font-semibold text-[#7A5A0A] transition hover:bg-[#EDE4CC]"
+            className="mt-2 flex w-full items-center justify-center gap-2 border border-[#E2D9B9] bg-[#F7F3E6] px-3 py-2.5 text-sm font-semibold text-[#765A18] transition hover:bg-[#EFE7D1]"
           >
             <CalendarPlus weight="bold" className="h-4 w-4" /> Schedule Inspection
           </button>
@@ -399,7 +399,7 @@ function PropertyModal({
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto bg-white shadow-2xl sm:border sm:border-[#D7D5CB]"
           >
             {/* Gallery */}
             <div className="relative h-72 sm:h-96">
@@ -440,7 +440,7 @@ function PropertyModal({
                 <CaretRight weight="bold" className="h-5 w-5" />
               </button>
               <div className="absolute bottom-4 left-4 right-4">
-                <span className="rounded-full bg-[#080E1A]/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#EAB308] backdrop-blur">
+                <span className="bg-[#102018]/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#F0CE70] backdrop-blur">
                   {p.type} · {p.purpose === "sale" ? "For Sale" : "For Rent"}
                 </span>
                 <h3 className="mt-2 font-serif text-2xl font-bold text-white">{p.title}</h3>
@@ -457,25 +457,25 @@ function PropertyModal({
 
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {p.beds > 0 && (
-                  <div className="rounded-2xl bg-[#F7F5F0] p-3 text-center">
+                  <div className="border border-[#E9E7DE] bg-[#F7F5F0] p-3 text-center">
                     <Bed weight="bold" className="mx-auto h-5 w-5 text-[#B8860B]" />
                     <p className="mt-1 text-sm font-bold text-[#080E1A]">{p.beds}</p>
                     <p className="text-[11px] text-slate-500">Bedrooms</p>
                   </div>
                 )}
                 {p.baths > 0 && (
-                  <div className="rounded-2xl bg-[#F7F5F0] p-3 text-center">
+                  <div className="border border-[#E9E7DE] bg-[#F7F5F0] p-3 text-center">
                     <Bathtub weight="bold" className="mx-auto h-5 w-5 text-[#B8860B]" />
                     <p className="mt-1 text-sm font-bold text-[#080E1A]">{p.baths}</p>
                     <p className="text-[11px] text-slate-500">Bathrooms</p>
                   </div>
                 )}
-                <div className="rounded-2xl bg-[#F7F5F0] p-3 text-center">
+                <div className="border border-[#E9E7DE] bg-[#F7F5F0] p-3 text-center">
                   <Ruler weight="bold" className="mx-auto h-5 w-5 text-[#B8860B]" />
                   <p className="mt-1 text-sm font-bold text-[#080E1A]">{p.areaSqm}</p>
                   <p className="text-[11px] text-slate-500">Sqm</p>
                 </div>
-                <div className="rounded-2xl bg-[#F7F5F0] p-3 text-center">
+                <div className="border border-[#E9E7DE] bg-[#F7F5F0] p-3 text-center">
                   <ShieldCheck weight="bold" className="mx-auto h-5 w-5 text-[#B8860B]" />
                   <p className="mt-1 text-sm font-bold text-[#080E1A]">Verified</p>
                   <p className="text-[11px] text-slate-500">{p.titleType}</p>

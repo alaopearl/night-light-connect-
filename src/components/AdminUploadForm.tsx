@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Property, PropertyType, Purpose, PromoBadge } from "../types";
 import { TITLE_TYPES, PRICE_UNITS, PROMO_BADGES, PRESET_IMAGES, LOCATIONS } from "../constants";
-import { supabase } from "../lib/supabase";
+import { uploadPropertyPhotos } from "../../backend/adminBackend";
+import { resolveLocalPhotoUrl } from "../../backend/localBackend";
 import { X, Plus, UploadSimple, ImageSquare, CurrencyNgn, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
 
 interface AdminUploadFormProps {
@@ -69,10 +70,19 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
   const [libOpen, setLibOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [resolvedPreviews, setResolvedPreviews] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setD((prev) => ({ ...prev, [key]: value }));
 
   const previews = useMemo(() => (d.imageUrls.length ? d.imageUrls : PRESET_IMAGES.slice(0, 1)), [d.imageUrls]);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all(previews.map((url) => resolveLocalPhotoUrl(url))).then((urls) => {
+      if (active) setResolvedPreviews(urls);
+    });
+    return () => { active = false; };
+  }, [previews]);
   const addImages = (urls: string[]) => {
     const next = [...d.imageUrls, ...urls.filter((u) => !d.imageUrls.includes(u))].slice(0, 8);
     set("imageUrls", next);
@@ -88,40 +98,15 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
       setUploadMessage(remainingSlots === 0 ? "You can upload up to 8 photos." : "Choose image files to upload.");
       return;
     }
-    if (!supabase) {
-      setUploadMessage("Supabase is not configured. Set the project URL and publishable key to upload photos.");
-      return;
-    }
-
-    const uploadedUrls: string[] = [];
-    let failedUploads = 0;
-
-    const bucketName = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
     setUploading(true);
     setUploadMessage(null);
     try {
-      for (const file of validFiles) {
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/[^a-zA-Z0-9.-]+/g, "-")}`;
-        const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-        if (error) {
-          console.error("Failed to upload image to Supabase Storage:", error);
-          failedUploads += 1;
-          continue;
-        }
-
-        const publicUrl = supabase.storage.from(bucketName).getPublicUrl(data.path).data.publicUrl;
-        uploadedUrls.push(publicUrl);
-      }
-
-      if (uploadedUrls.length) addImages(uploadedUrls);
+      const result = await uploadPropertyPhotos(validFiles);
+      if (result.urls.length) addImages(result.urls);
       setUploadMessage(
-        failedUploads
-          ? `${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded; ${failedUploads} failed. Check the bucket policies.`
-          : `${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded to ${bucketName}.`
+        result.error
+          ? `${result.urls.length ? `${result.urls.length} photo uploaded. ` : ""}${result.error}`
+          : `${result.urls.length} photo${result.urls.length === 1 ? "" : "s"} uploaded successfully.`
       );
     } catch (error) {
       console.error("Supabase Storage upload request failed:", error);
@@ -196,7 +181,7 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
       <div>
         <p className={labelCls}>Photos (max 8)</p>
         <div className="relative overflow-hidden rounded-2xl border border-white/10">
-          <img src={previews[Math.min(imgIdx, previews.length - 1)]} alt="" className="h-52 w-full object-cover" loading="lazy" decoding="async" />
+          <img src={(resolvedPreviews.length ? resolvedPreviews : previews)[Math.min(imgIdx, previews.length - 1)]} alt="" className="h-52 w-full object-cover" loading="lazy" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
             <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Property } from "../types";
 import { STATUSES, PROMO_BADGES, PRICE_UNITS } from "../constants";
+import LocalPropertyImage from "./LocalPropertyImage";
 import {
   PencilSimple,
   Trash,
@@ -16,7 +17,7 @@ import {
 interface AdminManagerProps {
   properties: Property[];
   onUpdate: (id: string, patch: Partial<Property>) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
   onEdit: (property: Property) => void;
 }
 
@@ -28,6 +29,8 @@ export default function AdminManager({ properties, onUpdate, onDelete, onEdit }:
   const [priceDraft, setPriceDraft] = useState<string>("");
   const [unitDraft, setUnitDraft] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -91,8 +94,8 @@ export default function AdminManager({ properties, onUpdate, onDelete, onEdit }:
               className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03] transition hover:border-white/10"
             >
               <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                <img
-                  src={p.images[0]?.url}
+                <LocalPropertyImage
+                  src={p.images[0]?.url ?? ""}
                   alt=""
                   className="h-20 w-full rounded-xl object-cover sm:w-28"
                 />
@@ -163,12 +166,19 @@ export default function AdminManager({ properties, onUpdate, onDelete, onEdit }:
                   {confirmDelete === p.id ? (
                     <button
                       onClick={() => {
-                        onDelete(p.id);
-                        setConfirmDelete(null);
+                        setDeletingId(p.id);
+                        setDeleteError(null);
+                        void onDelete(p.id).then((deleted) => {
+                          if (deleted) setConfirmDelete(null);
+                          else setDeleteError("Database did not confirm deletion. Check connection and admin permissions.");
+                        }).catch(() => {
+                          setDeleteError("Delete failed. Check connection and admin permissions, then retry.");
+                        }).finally(() => setDeletingId(null));
                       }}
-                      className="flex h-9 items-center gap-1.5 rounded-lg bg-red-500 px-3 text-xs font-bold text-white"
+                      disabled={deletingId === p.id}
+                      className="flex h-9 items-center gap-1.5 rounded-lg bg-red-500 px-3 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-60"
                     >
-                      <Check weight="bold" className="h-3.5 w-3.5" /> Sure?
+                      <Check weight="bold" className="h-3.5 w-3.5" /> {deletingId === p.id ? "Deleting…" : "Sure?"}
                     </button>
                   ) : (
                     <button
@@ -180,6 +190,9 @@ export default function AdminManager({ properties, onUpdate, onDelete, onEdit }:
                   )}
                 </div>
               </div>
+              {deleteError && confirmDelete === p.id && (
+                <p role="alert" className="px-4 pb-3 text-xs text-red-400">{deleteError}</p>
+              )}
 
               {/* Inline price editor */}
               {editingId === p.id && (

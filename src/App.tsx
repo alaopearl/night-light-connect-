@@ -17,8 +17,21 @@ import {
   Contact,
 } from "./components/HomeSections";
 import { Phone, MapPin, Check, X, CalendarCheck } from "@phosphor-icons/react";
-import { appendStoredRecord, STORAGE_KEYS, readPersistedRecord, readStored, subscribeToStoredKeys, writeStored } from "./lib/database";
-import { supabase } from "./lib/supabase";
+import {
+  appendStoredRecord,
+  readPersistedRecord,
+  readStored,
+  STORAGE_KEYS,
+  subscribeToStoredKeys,
+  syncStored,
+  writeStored,
+} from "./lib/database";
+import {
+  deleteProperty as deleteBackendProperty,
+  readProperties,
+  saveProperty,
+  subscribeToProperties,
+} from "../backend/adminBackend";
 
 const LEADS_KEY = STORAGE_KEYS.leads;
 const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
@@ -40,7 +53,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     void Promise.all([
-      readPersistedRecord<Property[]>(CUSTOM_PROPERTIES_KEY, []),
+      readProperties(),
       readPersistedRecord<string[]>(DELETED_PROPERTIES_KEY, []),
     ]).then(([savedProperties, savedDeletedIds]) => {
       if (!active) return;
@@ -49,30 +62,38 @@ export default function App() {
       setCatalogLoaded(true);
     });
 
+    const unsubscribeProperties = subscribeToProperties((savedProperties) => {
+      if (active) setCustomProperties(savedProperties);
+    });
+
     const unsubscribe = subscribeToStoredKeys(
-      [CUSTOM_PROPERTIES_KEY, DELETED_PROPERTIES_KEY],
+      [DELETED_PROPERTIES_KEY],
       (key, value) => {
-        if (key === CUSTOM_PROPERTIES_KEY && Array.isArray(value)) {
-          setCustomProperties(value as Property[]);
-        }
         if (key === DELETED_PROPERTIES_KEY && Array.isArray(value)) {
           setDeletedPropertyIds(value as string[]);
         }
       }
     );
 
+    const handleLocalStorageChange = (event: StorageEvent) => {
+      if (event.key !== DELETED_PROPERTIES_KEY || !event.newValue) return;
+      try {
+        setDeletedPropertyIds(JSON.parse(event.newValue) as string[]);
+      } catch {
+        // Ignore malformed local cache values.
+      }
+    };
+    window.addEventListener("storage", handleLocalStorageChange);
+
     return () => {
       active = false;
+      unsubscribeProperties();
       unsubscribe();
+      window.removeEventListener("storage", handleLocalStorageChange);
     };
   }, []);
 
   // Persist catalog changes only after remote state has been loaded.
-  useEffect(() => {
-    if (!catalogLoaded) return;
-    writeStored(CUSTOM_PROPERTIES_KEY, customProperties);
-  }, [catalogLoaded, customProperties]);
-
   useEffect(() => {
     if (!catalogLoaded) return;
     writeStored(DELETED_PROPERTIES_KEY, deletedPropertyIds);
@@ -161,6 +182,7 @@ export default function App() {
       }
       return [...prev, p];
     });
+    void saveProperty(p).catch((error) => console.warn("Property save failed:", error));
   }, []);
 
   const updateProperty = useCallback((id: string, patch: Partial<Property>) => {
@@ -172,37 +194,41 @@ export default function App() {
       if (!base) return prev;
       return [...prev, { ...base, ...patch }];
     });
-  }, []);
-
-  const deleteProperty = useCallback((id: string) => {
-    const property = allProperties.find((item) => item.id === id);
-    setCustomProperties((prev) => prev.filter((p) => p.id !== id));
-    setDeletedPropertyIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-
-    if (supabase && property) {
-      const bucket = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
-      const uploadedPaths = property.images.flatMap(({ url }) => {
-        try {
-          const pathname = new URL(url).pathname;
-          const marker = `/object/public/${bucket}/`;
-          const index = pathname.indexOf(marker);
-          return index >= 0 ? [decodeURIComponent(pathname.slice(index + marker.length))] : [];
-        } catch {
-          return [];
-        }
-      });
-      if (uploadedPaths.length) {
-        void supabase.storage.from(bucket).remove(uploadedPaths).then(({ error }) => {
-          if (error) console.warn("Property deleted, but uploaded photo cleanup failed:", error.message);
-        });
-      }
+    const current = customProperties.find((p) => p.id === id) ??
+      DEFAULT_PROPERTIES.find((p) => p.id === id);
+    if (current) {
+      void saveProperty({ ...current, ...patch }).catch((error) => console.warn("Property update failed:", error));
     }
-  }, [allProperties]);
+  }, [customProperties]);
+
+  const deleteProperty = useCallback(async (id: string): Promise<boolean> => {
+    const property = allProperties.find((item) => item.id === id);
+    const nextDeletedPropertyIds = deletedPropertyIds.includes(id)
+      ? deletedPropertyIds
+      : [...deletedPropertyIds, id];
+
+    if (!(await syncStored(DELETED_PROPERTIES_KEY, nextDeletedPropertyIds))) {
+      return false;
+    }
+    try {
+      await deleteBackendProperty(id, property?.images.map((image) => image.url) ?? []);
+    } catch (error) {
+      console.warn("Property delete failed:", error);
+      return false;
+    }
+
+    setCustomProperties((prev) => prev.filter((item) => item.id !== id));
+    setDeletedPropertyIds(nextDeletedPropertyIds);
+
+    return true;
+  }, [allProperties, deletedPropertyIds]);
 
   const resetDefaults = useCallback(() => {
+    void Promise.all(customProperties.map((property) => deleteBackendProperty(property.id, property.images.map((image) => image.url))));
     setCustomProperties([]);
     setDeletedPropertyIds([]);
-  }, []);
+    writeStored(DELETED_PROPERTIES_KEY, []);
+  }, [customProperties]);
 
   useEffect(() => {
     const handler = (e: Event) => {

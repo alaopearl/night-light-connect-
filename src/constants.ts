@@ -207,6 +207,44 @@ export const BED_OPTIONS = ["Any Beds", "1", "2", "3", "4", "5+"];
 
 export const DEFAULT_PROPERTIES: Property[] = [
   {
+    id: "lekki-ajah-bungalow-1600sqm",
+    title: "New 3-Bedroom Bungalow in Lekki-Ajah",
+    slug: "new-3-bedroom-bungalow-lekki-ajah",
+    location: "Lagos",
+    area: "Lekki-Ajah, Lagos",
+    price: "₦130,000,000",
+    priceNumeric: 170_000_000,
+    discountPrice: 130_000_000,
+    badge: "PRICE REDUCED",
+    type: "Duplex",
+    purpose: "sale",
+    beds: 3,
+    baths: 3,
+    toilets: 3,
+    areaSqm: 1_600,
+    titleType: "Excision / Deed of Assignment",
+    featured: true,
+    published: true,
+    images: [
+      {
+        url: "/lekki-ajah-bungalow.jpg",
+        alt: "New 3-bedroom bungalow in Lekki-Ajah",
+      },
+    ],
+    description:
+      "A new 3-bedroom bungalow situated on a massive 1,600sqm plot in Lekki-Ajah, Lagos. The property is offered with a clean and verifiable title package comprising a Registered Survey, Deed of Assignment, and Payment Receipt. Serious and ready buyers are invited for inspection.",
+    features: [
+      "Newly built 3-bedroom bungalow",
+      "Massive 1,600sqm plot",
+      "Registered Survey",
+      "Deed of Assignment",
+      "Payment Receipt",
+      "Lekki-Ajah location",
+    ],
+    coordinates: { label: "Lekki-Ajah, Lagos" },
+    status: "available",
+  },
+  {
     id: "p1",
     title: "Luxury 4 Bedroom Fully Detached Duplex with BQ",
     slug: "luxury-4br-detached-duplex-lekki",

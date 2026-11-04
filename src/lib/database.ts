@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { Property } from "../types";
 
 const DB_NAME = "night-light-connect";
 const STORE_NAME = "site-data";
@@ -66,8 +67,8 @@ async function saveToIndexedDb(key: string, value: unknown) {
   }
 }
 
-async function saveToSupabase(key: string, value: unknown) {
-  if (!supabase) return;
+async function saveToSupabase(key: string, value: unknown): Promise<boolean> {
+  if (!supabase) return true;
 
   try {
     const { error } = await supabase.from("site_data").upsert(
@@ -81,10 +82,18 @@ async function saveToSupabase(key: string, value: unknown) {
 
     if (error) {
       console.warn("Supabase sync failed:", error.message);
+      return false;
     }
+    return true;
   } catch (error) {
     console.warn("Supabase sync failed:", error);
+    return false;
   }
+}
+
+export function syncStored(key: string, value: unknown): Promise<boolean> {
+  if (key in REQUEST_TABLES) return Promise.resolve(true);
+  return saveToSupabase(key, value);
 }
 
 export function readStored<T>(key: string, fallback: T): T {
@@ -99,7 +108,7 @@ export function writeStored(key: string, value: unknown) {
   }
 
   void saveToIndexedDb(key, value);
-  if (!(key in REQUEST_TABLES)) void saveToSupabase(key, value);
+  if (!(key in REQUEST_TABLES)) void syncStored(key, value);
 }
 
 export function appendStoredRecord<T extends { id: string; createdAt?: string }>(key: string, record: T) {
@@ -133,16 +142,24 @@ export async function readStoredRecords<T>(key: string, fallback: T[] = []): Pro
   return readStored<T[]>(key, fallback);
 }
 
-export function deleteStoredRecord(key: string, id: string) {
+export async function deleteStoredRecord<T extends { id: string }>(key: string, id: string, records: T[]): Promise<boolean> {
   const table = REQUEST_TABLES[key as keyof typeof REQUEST_TABLES];
-  const records = readStored<{ id: string }[]>(key, []).filter((record) => record.id !== id);
-  writeStored(key, records);
 
   if (supabase && table) {
-    void supabase.from(table).delete().eq("id", id).then(({ error }) => {
-      if (error) console.warn(`Supabase ${table} delete failed:`, error.message);
-    });
+    try {
+      const { data, error } = await supabase.from(table).delete().eq("id", id).select("id");
+      if (error || !data?.length) {
+        console.warn(`Supabase ${table} delete failed:`, error?.message ?? "No matching row was deleted.");
+        return false;
+      }
+    } catch (error) {
+      console.warn(`Supabase ${table} delete failed:`, error);
+      return false;
+    }
   }
+
+  writeStored(key, records);
+  return true;
 }
 
 export function subscribeToStoredRecords(
@@ -266,4 +283,84 @@ export async function readPersistedRecord<T>(key: string, fallback: T): Promise<
   } catch {
     return localValue;
   }
+}
+
+export async function readProperties(): Promise<Property[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("properties")
+    .select("value")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Supabase properties read failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).flatMap((row) => {
+    const property = row.value as Property | null;
+    return property?.id ? [property] : [];
+  });
+}
+
+export async function upsertProperty(property: Property): Promise<boolean> {
+  if (!supabase) return false;
+
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("properties").upsert(
+    {
+      id: property.id,
+      value: property,
+      created_at: property.createdAt ?? now,
+      updated_at: now,
+    },
+    { onConflict: "id" }
+  );
+
+  if (error) {
+    console.warn("Supabase property upsert failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteProperty(id: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase.from("properties").delete().eq("id", id);
+  if (error) {
+    console.warn("Supabase property delete failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export function subscribeToProperties(onChange: (properties: Property[]) => void) {
+  if (!supabase) return () => undefined;
+
+  let refreshVersion = 0;
+  const refresh = () => {
+    const version = ++refreshVersion;
+    void readProperties().then((properties) => {
+      if (version === refreshVersion) onChange(properties);
+    });
+  };
+
+  const channel = supabase
+    .channel("properties-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "properties" },
+      refresh
+    )
+    .subscribe((status, error) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("Supabase properties Realtime subscription failed:", error);
+      }
+    });
+
+  return () => {
+    void supabase?.removeChannel(channel);
+  };
 }

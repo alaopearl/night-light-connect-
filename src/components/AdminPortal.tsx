@@ -57,7 +57,7 @@ interface AdminPortalProps {
   properties: Property[];
   onAddProperty: (p: Property) => void;
   onUpdateProperty: (id: string, patch: Partial<Property>) => void;
-  onDeleteProperty: (id: string) => void;
+  onDeleteProperty: (id: string) => Promise<boolean>;
   onResetDefaults: () => void;
 }
 
@@ -163,18 +163,26 @@ export default function AdminPortal({
     notify("Session locked");
   };
 
-  const deleteLead = (id: string) => {
+  const deleteLead = async (id: string) => {
     const next = leads.filter((l) => l.id !== id);
+    const deleted = await deleteStoredRecord(LEADS_KEY, id, next);
+    if (!deleted) {
+      notify("Lead deletion failed. Check the database connection and admin permissions.");
+      return;
+    }
     setLeads(next);
-    deleteStoredRecord(LEADS_KEY, id);
-    notify("Lead deleted");
+    notify("Lead permanently deleted");
   };
 
-  const deleteInspection = (id: string) => {
+  const deleteInspection = async (id: string) => {
     const next = inspections.filter((i) => i.id !== id);
+    const deleted = await deleteStoredRecord(INSPECTIONS_KEY, id, next);
+    if (!deleted) {
+      notify("Inspection deletion failed. Check the database connection and admin permissions.");
+      return;
+    }
     setInspections(next);
-    deleteStoredRecord(INSPECTIONS_KEY, id);
-    notify("Inspection request deleted");
+    notify("Inspection request permanently deleted");
   };
 
   const handleSaveProperty = (p: Property) => {
