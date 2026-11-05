@@ -73,6 +73,30 @@ update public.properties set updated_at = now() where updated_at is null;
 alter table public.properties alter column updated_at set default now();
 alter table public.properties alter column updated_at set not null;
 
+-- Existing installations may have legacy NOT NULL columns such as title or price.
+-- The app stores the complete Property object in value, so legacy columns
+-- must not reject JSON-only upserts.
+do $$
+declare
+  legacy_column record;
+begin
+  for legacy_column in
+    select c.column_name
+    from information_schema.columns c
+    where c.table_schema = 'public'
+      and c.table_name = 'properties'
+      and c.column_name not in ('id', 'value', 'created_at', 'updated_at')
+      and c.is_nullable = 'NO'
+      and c.column_default is null
+  loop
+    execute format(
+      'alter table public.properties alter column %I drop not null',
+      legacy_column.column_name
+    );
+  end loop;
+end;
+$$;
+
 alter table public.properties enable row level security;
 alter table public.properties replica identity full;
 
