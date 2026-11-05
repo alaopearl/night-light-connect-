@@ -57,6 +57,8 @@ create table if not exists public.properties (
   updated_at timestamptz not null default now()
 );
 
+alter table public.properties alter column id type text using id::text;
+
 alter table public.properties add column if not exists value jsonb;
 update public.properties set value = '{}'::jsonb where value is null;
 alter table public.properties alter column value set not null;
