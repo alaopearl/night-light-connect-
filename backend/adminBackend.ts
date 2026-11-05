@@ -65,14 +65,6 @@ export async function uploadPropertyPhotos(files: File[]): Promise<{ urls: strin
   const client = await requireAdmin();
   const urls: string[] = [];
 
-  const { data: bucket, error: bucketError } = await client.storage.getBucket(bucketName);
-  if (bucketError || !bucket) {
-    return {
-      urls,
-      error: `Storage bucket "${bucketName}" was not found. Create it in Supabase Storage, or run supabase/storage-policy.sql in the SQL Editor.`,
-    };
-  }
-
   for (const file of files) {
     if (!allowedPhotoTypes.has(file.type)) {
       return { urls, error: `Unsupported image type: ${file.type || "unknown"}` };
@@ -89,7 +81,12 @@ export async function uploadPropertyPhotos(files: File[]): Promise<{ urls: strin
       contentType: file.type,
     });
 
-    if (error) return { urls, error: error.message };
+    if (error) {
+      if (error.message.toLowerCase().includes("bucket not found")) {
+        return { urls, error: `Storage bucket "${bucketName}" was not found. Create the public bucket and run supabase/storage-policy.sql.` };
+      }
+      return { urls, error: error.message };
+    }
     urls.push(client.storage.from(bucketName).getPublicUrl(data.path).data.publicUrl);
   }
 

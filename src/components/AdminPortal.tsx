@@ -316,7 +316,7 @@ export default function AdminPortal({
               <h2 className="font-serif text-lg font-bold text-white">Night Light Connect — Super Admin</h2>
               <p className="flex items-center gap-1.5 text-xs text-slate-500">
                 <ShieldCheck weight="duotone" className="h-3.5 w-3.5 text-[#EAB308]" />
-                Building & pricing control center (local real-time backend)
+                {supabase ? "Building & pricing control center (shared cloud backend)" : "Building & pricing control center (local real-time backend)"}
               </p>
             </div>
           </div>
