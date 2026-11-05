@@ -5,6 +5,20 @@ create table if not exists public.properties (
   updated_at timestamptz not null default now()
 );
 
+alter table public.properties add column if not exists value jsonb;
+update public.properties set value = '{}'::jsonb where value is null;
+alter table public.properties alter column value set not null;
+
+alter table public.properties add column if not exists created_at timestamptz;
+update public.properties set created_at = now() where created_at is null;
+alter table public.properties alter column created_at set default now();
+alter table public.properties alter column created_at set not null;
+
+alter table public.properties add column if not exists updated_at timestamptz;
+update public.properties set updated_at = now() where updated_at is null;
+alter table public.properties alter column updated_at set default now();
+alter table public.properties alter column updated_at set not null;
+
 alter table public.properties enable row level security;
 alter table public.properties replica identity full;
 
