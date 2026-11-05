@@ -2,8 +2,7 @@ import type { Property } from "../src/types";
 import { supabase } from "../src/lib/supabase";
 import * as localBackend from "./localBackend";
 
-const backendMode = import.meta.env.VITE_BACKEND_MODE || "local";
-export const isLocalBackend = backendMode !== "supabase";
+export const isLocalBackend = true;
 
 const bucketName = import.meta.env.VITE_SUPABASE_BUCKET || "night-light-img";
 const allowedPhotoTypes = new Set([
