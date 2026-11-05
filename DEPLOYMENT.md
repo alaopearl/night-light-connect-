@@ -34,9 +34,9 @@ in your host's dashboard before building:
 | `VITE_SUPABASE_ANON_KEY` | Production Supabase anon key    | None                            |
 | `VITE_SUPABASE_BUCKET`  | Public property photo bucket     | `night-light-img`               |
 
-For local browser uploads, set `VITE_BACKEND_MODE=local` (or omit it). The app will then store property photos in IndexedDB and will not create or contact a Supabase client.
+For cross-device synchronization, set `VITE_BACKEND_MODE=supabase`. For local-only testing, set it to `local`; the app will then store property photos in IndexedDB and will not contact Supabase.
 
-## Optional Supabase storage setup
+## Supabase shared storage setup
 
 Before uploading property photos in production:
 

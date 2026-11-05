@@ -29,6 +29,7 @@ import {
   Tag,
 } from "@phosphor-icons/react";
 import { STORAGE_KEYS, deleteStoredRecord, readStored, readStoredRecords, subscribeToStoredRecords, writeStored } from "../lib/database";
+import { supabase } from "../lib/supabase";
 
 const LEADS_KEY = STORAGE_KEYS.leads;
 const INSPECTIONS_KEY = STORAGE_KEYS.inspections;
@@ -70,6 +71,12 @@ export default function AdminPortal({
   onDeleteProperty,
   onResetDefaults,
 }: AdminPortalProps) {
+  const hasAdminRole = (
+    user: { app_metadata?: Record<string, unknown> } | null | undefined
+  ) => {
+    const role = user?.app_metadata?.role;
+    return role === "admin" || role === "super_admin";
+  };
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -77,7 +84,8 @@ export default function AdminPortal({
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [unlocked, setUnlocked] = useState<boolean>(() => load(ADMIN_SESSION_KEY, false));
+  const [unlocked, setUnlocked] = useState<boolean>(() => !supabase && load(ADMIN_SESSION_KEY, false));
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pinError, setPinError] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
@@ -106,12 +114,34 @@ export default function AdminPortal({
     };
   }, [unlocked]);
 
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase.auth.getSession().then(({ data }) => setUnlocked(hasAdminRole(data.session?.user)));
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUnlocked(hasAdminRole(session?.user));
+    });
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
   const notify = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   };
 
   const unlock = async () => {
+    if (supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && hasAdminRole(data.user)) {
+        setUnlocked(true);
+        setPassword("");
+        setPinError(false);
+        return;
+      }
+      if (!error) await supabase.auth.signOut();
+      setPinError(true);
+      return;
+    }
+
     if (password === ADMIN_PIN) {
       setUnlocked(true);
       setPassword("");
@@ -125,7 +155,8 @@ export default function AdminPortal({
   const lock = async () => {
     setUnlocked(false);
     setPassword("");
-    save(ADMIN_SESSION_KEY, false);
+    if (supabase) await supabase.auth.signOut();
+    else save(ADMIN_SESSION_KEY, false);
     notify("Session locked");
   };
 
@@ -208,7 +239,9 @@ export default function AdminPortal({
             </div>
           </div>
           <p className="mt-5 text-sm leading-relaxed text-slate-400">
-            Enter the local admin PIN to manage listings, images, leads and inspections.
+            {supabase
+              ? "Sign in with the Supabase admin account to sync listings, images, leads and inspections across devices."
+              : "Enter the local admin PIN."}
           </p>
           <form
             onSubmit={(e) => {
@@ -217,6 +250,17 @@ export default function AdminPortal({
             }}
             className="mt-4"
           >
+            {supabase && (
+              <input
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setPinError(false); }}
+                placeholder="Admin email"
+                className="mb-2 h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-[#D4AF37]"
+                autoFocus
+              />
+            )}
             <input
               type="password"
               autoComplete="current-password"
@@ -225,11 +269,11 @@ export default function AdminPortal({
                 setPassword(e.target.value);
                 setPinError(false);
               }}
-              placeholder="Local admin PIN"
+              placeholder={supabase ? "Admin password" : "Local admin PIN"}
               className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-center text-lg text-white placeholder-slate-600 outline-none transition focus:border-[#D4AF37]"
-              autoFocus
+              autoFocus={!supabase}
             />
-            {pinError && <p className="mt-2 text-xs font-semibold text-red-400">Incorrect admin PIN.</p>}
+            {pinError && <p className="mt-2 text-xs font-semibold text-red-400">Sign-in failed. Check credentials and Supabase admin role.</p>}
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
