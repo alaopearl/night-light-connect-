@@ -87,7 +87,6 @@ begin
       and c.table_name = 'properties'
       and c.column_name not in ('id', 'value', 'created_at', 'updated_at')
       and c.is_nullable = 'NO'
-      and c.column_default is null
   loop
     execute format(
       'alter table public.properties alter column %I drop not null',
