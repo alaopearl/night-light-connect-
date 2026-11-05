@@ -319,7 +319,7 @@ export default function AdminPortal({
               <h2 className="font-serif text-lg font-bold text-white">Night Light Connect — Super Admin</h2>
               <p className="flex items-center gap-1.5 text-xs text-slate-500">
                 <ShieldCheck weight="duotone" className="h-3.5 w-3.5 text-[#EAB308]" />
-                Building & pricing control center (live database sync)
+                Building & pricing control center (local real-time backend)
               </p>
             </div>
           </div>
@@ -436,7 +436,7 @@ export default function AdminPortal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-5 py-4 sm:px-7">
           <p className="flex items-center gap-2 text-xs text-slate-500">
             <ShieldCheck weight="duotone" className="h-4 w-4 text-[#EAB308]" />
-            {COMPANY.address} · changes persist in your browser
+            {COMPANY.address} · changes update live in your browser
           </p>
           <div className="flex items-center gap-2">
             {confirmed ? (

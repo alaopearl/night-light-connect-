@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Property, PropertyType, Purpose, PromoBadge } from "../types";
 import { TITLE_TYPES, PRICE_UNITS, PROMO_BADGES, PRESET_IMAGES, LOCATIONS } from "../constants";
-import { uploadPropertyPhotos } from "../../backend/adminBackend";
+import { isLocalBackend, uploadPropertyPhotos } from "../../backend/adminBackend";
 import { resolveLocalPhotoUrl } from "../../backend/localBackend";
 import { X, Plus, UploadSimple, ImageSquare, CurrencyNgn, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
 
@@ -110,7 +110,11 @@ export default function AdminUploadForm({ initial, onSave, onCancel }: AdminUplo
       );
     } catch (error) {
       console.error("Supabase Storage upload request failed:", error);
-      setUploadMessage("Photo upload failed. Check your connection, bucket, and Storage policies.");
+      setUploadMessage(
+        isLocalBackend
+          ? "Photo upload failed. Check browser storage permissions and try again."
+          : "Photo upload failed. Check your connection, bucket, and Storage policies."
+      );
     } finally {
       setUploading(false);
     }
