@@ -22,5 +22,11 @@ services:
         value: nightlighthomes171@gmail.com
       - key: VITE_ADDRESS
         value: 23 High Court, Lekki-Ajah Road, Lagos, Nigeria
-      - key: VITE_ADMIN_PIN
-        sync: false
+      - key: VITE_BACKEND_MODE
+        value: supabase
+      - key: VITE_SUPABASE_URL
+        value: https://ohrxdssaszfdeqremxsp.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: sb_publishable_rY1r-smR-9GOrVi62STpog_fs7heYQc
+      - key: VITE_SUPABASE_BUCKET
+        value: night-light-img
