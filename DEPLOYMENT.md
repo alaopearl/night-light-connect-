@@ -29,6 +29,19 @@ in your host's dashboard before building:
 | `VITE_EMAIL`        | Contact / inquiry email          | `nightlighthomes171@gmail.com`  |
 | `VITE_ADDRESS`      | Office address                   | `23 High Court, Lekki-Ajah…`    |
 | `VITE_ADMIN_PIN`    | Admin portal PIN (change me!)    | `2468`                          |
+| `VITE_BACKEND_MODE` | `supabase` or `local`            | `supabase`                      |
+| `VITE_SUPABASE_URL` | Production Supabase project URL  | None                            |
+| `VITE_SUPABASE_ANON_KEY` | Production Supabase anon key    | None                            |
+| `VITE_SUPABASE_BUCKET`  | Public property photo bucket     | `night-light-img`               |
+
+## Supabase storage setup
+
+Before uploading property photos in production:
+
+1. Run `supabase/properties.sql` or `supabase/storage-policy.sql` in the production project's SQL Editor.
+2. Ensure the Storage bucket is named `night-light-img` and set to public.
+3. Set the Supabase environment variables on the deployment host before rebuilding.
+4. Assign the signed-in admin user `app_metadata.role = "admin"` or `"super_admin"`, then sign out and back in.
 
 ---
 
