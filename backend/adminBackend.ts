@@ -168,14 +168,26 @@ export function subscribeToProperties(onChange: (properties: Property[]) => void
   };
 
   void refresh();
+  const pollingTimer = window.setInterval(refresh, 3000);
+  const refreshOnVisible = () => {
+    if (document.visibilityState === "visible") refresh();
+  };
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", refreshOnVisible);
+
   const channel = client
     .channel("admin-properties-realtime")
     .on("postgres_changes", { event: "*", schema: "public", table: "properties" }, refresh)
     .subscribe((status, error) => {
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        console.warn("Supabase Realtime subscription failed:", error);
+        console.warn("Supabase Realtime subscription failed; polling remains active:", error);
       }
     });
 
-  return () => void client.removeChannel(channel);
+  return () => {
+    window.clearInterval(pollingTimer);
+    window.removeEventListener("focus", refresh);
+    document.removeEventListener("visibilitychange", refreshOnVisible);
+    void client.removeChannel(channel);
+  };
 }

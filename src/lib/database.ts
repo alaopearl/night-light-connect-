@@ -347,6 +347,13 @@ export function subscribeToProperties(onChange: (properties: Property[]) => void
     });
   };
 
+  const pollingTimer = window.setInterval(refresh, 3000);
+  const refreshOnVisible = () => {
+    if (document.visibilityState === "visible") refresh();
+  };
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", refreshOnVisible);
+
   const channel = supabase
     .channel("properties-realtime")
     .on(
@@ -361,6 +368,9 @@ export function subscribeToProperties(onChange: (properties: Property[]) => void
     });
 
   return () => {
+    window.clearInterval(pollingTimer);
+    window.removeEventListener("focus", refresh);
+    document.removeEventListener("visibilitychange", refreshOnVisible);
     void supabase?.removeChannel(channel);
   };
 }
