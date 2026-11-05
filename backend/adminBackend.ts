@@ -24,10 +24,13 @@ async function requireAdmin() {
   const client = requireSupabase();
   const { data, error } = await client.auth.getSession();
   if (error) throw error;
+  if (!data.session) throw new Error("Admin sign-in required.");
 
-  const role = data.session?.user.app_metadata?.role;
-  if (!data.session || (role !== "admin" && role !== "super_admin")) {
-    throw new Error("Admin sign-in required.");
+  const refreshed = await client.auth.refreshSession();
+  const session = refreshed.data.session ?? data.session;
+  const role = session.user.app_metadata?.role;
+  if (role !== "admin" && role !== "super_admin") {
+    throw new Error("Admin sign-in required. Confirm the account has app_metadata.role = admin or super_admin.");
   }
 
   return client;
@@ -131,7 +134,11 @@ export async function saveProperty(property: Property): Promise<void> {
     { onConflict: "id" }
   );
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      `Property save failed: ${error.message}${error.code ? ` (${error.code})` : ""}${error.details ? ` - ${error.details}` : ""}`
+    );
+  }
 }
 
 export async function deleteProperty(id: string, imageUrls: string[] = []): Promise<void> {

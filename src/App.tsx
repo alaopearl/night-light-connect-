@@ -182,7 +182,10 @@ export default function App() {
       }
       return [...prev, p];
     });
-    void saveProperty(p).catch((error) => console.warn("Property save failed:", error));
+    void saveProperty(p).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(message);
+    });
   }, []);
 
   const updateProperty = useCallback((id: string, patch: Partial<Property>) => {
