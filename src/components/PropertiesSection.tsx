@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Property, Filters } from "../types";
 import { LOCATIONS, TYPES, PURPOSES, BED_OPTIONS, WHATSAPP_LINK, PHONE_LINK } from "../constants";
+import LocalPropertyImage from "./LocalPropertyImage";
 import {
   MagnifyingGlass,
   MapPin,
@@ -253,16 +254,12 @@ function PropertyCard({ property: p, onInspect }: { property: Property; onInspec
       >
         <div className="relative h-60 overflow-hidden">
           <AnimatePresence mode="wait">
-            <motion.img
+            <LocalPropertyImage
               key={imgIdx}
               src={images[imgIdx].url}
               alt={images[imgIdx].alt}
               loading="lazy"
               decoding="async"
-              initial={{ opacity: 0, scale: 1.06 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
               className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
               onClick={() => setOpen(true)}
             />
@@ -404,16 +401,12 @@ function PropertyModal({
             {/* Gallery */}
             <div className="relative h-72 sm:h-96">
               <AnimatePresence mode="wait">
-                <motion.img
+                <LocalPropertyImage
                   key={currentImage}
                   src={images[currentImage].url}
                   alt={images[currentImage].alt}
                   loading="lazy"
                   decoding="async"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
                   className="h-full w-full object-cover"
                 />
               </AnimatePresence>

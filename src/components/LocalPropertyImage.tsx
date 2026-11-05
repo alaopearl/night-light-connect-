@@ -6,7 +6,7 @@ interface LocalPropertyImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   src: string;
 }
 
-export default function LocalPropertyImage({ src, ...props }: LocalPropertyImageProps) {
+export default function LocalPropertyImage({ src, loading = "lazy", decoding = "async", ...props }: LocalPropertyImageProps) {
   const [resolvedSrc, setResolvedSrc] = useState(src);
 
   useEffect(() => {
@@ -17,5 +17,5 @@ export default function LocalPropertyImage({ src, ...props }: LocalPropertyImage
     return () => { active = false; };
   }, [src]);
 
-  return <img {...props} src={resolvedSrc} />;
+  return <img {...props} src={resolvedSrc} loading={loading} decoding={decoding} />;
 }

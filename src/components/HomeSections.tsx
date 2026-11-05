@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Lead, Property } from "../types";
 import { COMPANY, STATS, REGIONS, SERVICES, WHY_US, TESTIMONIALS, WHATSAPP_LINK, PHONE_LINK } from "../constants";
+import LocalPropertyImage from "./LocalPropertyImage";
 import {
   WhatsappLogo,
   Phone,
@@ -128,7 +129,7 @@ export function Hero({ properties, onInspect, onPropertyClick, onSearch }: Pick<
                     }}
                     className="flex w-full items-center gap-3 border-b border-[#E9E7DE] px-4 py-3 text-left transition last:border-0 hover:bg-[#F3F0E7]"
                   >
-                    <img src={p.images[0]?.url} alt="" className="h-11 w-14 rounded-lg object-cover" loading="lazy" decoding="async" />
+                    <LocalPropertyImage src={p.images[0]?.url ?? ""} alt="" className="h-11 w-14 rounded-lg object-cover" loading="lazy" decoding="async" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-[#102018]">{p.title}</span>
                       <span className="block text-xs text-[#8A6817]">{p.area}, {p.location} · {p.price}</span>
@@ -209,16 +210,13 @@ export function Hero({ properties, onInspect, onPropertyClick, onSearch }: Pick<
         >
           {current && (
             <div className="relative min-h-[390px] overflow-hidden bg-[#25382C] sm:min-h-[500px] lg:min-h-[min(72vh,720px)]">
-              <motion.img
+              <LocalPropertyImage
                 key={current.id}
-                src={current.images[0]?.url}
+                src={current.images[0]?.url ?? ""}
                 alt={current.title}
                 className="absolute inset-0 h-full w-full object-cover"
-                loading="eager"
+                loading="lazy"
                 decoding="async"
-                initial={{ opacity: 0, scale: 1.025 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.7, ease: "easeOut" }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#07120D]/90 via-[#07120D]/5 to-[#07120D]/15" />
               <div className="absolute left-4 right-4 top-4 flex items-start justify-between sm:left-6 sm:right-6 sm:top-6">

@@ -124,9 +124,14 @@ export function subscribeToProperties(onChange: (properties: Property[]) => void
     : null;
 
   const refresh = () => void readProperties().then(onChange);
+  const refreshOnVisible = () => {
+    if (document.visibilityState === "visible") refresh();
+  };
   if (channel) channel.onmessage = refresh;
   window.addEventListener("storage", refresh);
   window.addEventListener("nlc-local-backend-change", refresh);
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", refreshOnVisible);
   const pollingTimer = window.setInterval(refresh, 1000);
   void refresh();
 
@@ -134,6 +139,8 @@ export function subscribeToProperties(onChange: (properties: Property[]) => void
     channel?.close();
     window.removeEventListener("storage", refresh);
     window.removeEventListener("nlc-local-backend-change", refresh);
+    window.removeEventListener("focus", refresh);
+    document.removeEventListener("visibilitychange", refreshOnVisible);
     window.clearInterval(pollingTimer);
   };
 }
