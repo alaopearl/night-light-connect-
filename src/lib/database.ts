@@ -71,6 +71,16 @@ async function saveToSupabase(key: string, value: unknown): Promise<boolean> {
   if (!supabase) return true;
 
   try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.warn("Supabase session check failed:", sessionError.message);
+      return false;
+    }
+    const role = sessionData.session?.user.app_metadata?.role;
+    if (!sessionData.session || (role !== "admin" && role !== "super_admin")) {
+      return true;
+    }
+
     const { error } = await supabase.from("site_data").upsert(
       {
         key,
@@ -198,6 +208,11 @@ export function clearStored(key: string) {
 
   void (async () => {
     if (!supabase) return;
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) return;
+    const role = sessionData.session.user.app_metadata?.role;
+    if (role !== "admin" && role !== "super_admin") return;
+
     const { error } = await supabase.from("site_data").delete().eq("key", key);
     if (error) console.warn("Supabase delete failed:", error.message);
   })();

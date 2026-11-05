@@ -1,3 +1,55 @@
+create table if not exists public.site_data (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_data add column if not exists key text;
+alter table public.site_data add column if not exists value jsonb;
+update public.site_data set value = '{}'::jsonb where value is null;
+alter table public.site_data alter column value set not null;
+create index if not exists site_data_updated_at_idx on public.site_data (updated_at desc);
+alter table public.site_data enable row level security;
+revoke all on public.site_data from anon, authenticated;
+grant select, insert, update, delete on public.site_data to authenticated;
+grant select on public.site_data to anon;
+
+alter table public.site_data add column if not exists updated_at timestamptz;
+update public.site_data set updated_at = now() where updated_at is null;
+alter table public.site_data alter column updated_at set default now();
+alter table public.site_data alter column updated_at set not null;
+alter table public.site_data replica identity full;
+
+drop policy if exists "Allow public access to site data" on public.site_data;
+drop policy if exists "Public can read property catalog data" on public.site_data;
+create policy "Public can read property catalog data"
+  on public.site_data
+  for select
+  to anon
+  using (key in ('nlc_custom_properties', 'nlc_deleted_properties'));
+
+drop policy if exists "Authenticated admins manage site data" on public.site_data;
+create policy "Authenticated admins manage site data"
+  on public.site_data
+  for all
+  to authenticated
+  using ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'))
+  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'super_admin'));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'site_data'
+  ) then
+    execute 'alter publication supabase_realtime add table public.site_data';
+  end if;
+end;
+$$;
+
 create table if not exists public.properties (
   id text primary key,
   value jsonb not null,
